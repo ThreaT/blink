@@ -1,0 +1,7 @@
+/back/target/
+/examples/target/
+/front/target/
+/site/target/
+nb-configuration.xml
+.git
+/target/
