@@ -44,12 +44,13 @@ public class Application extends Blink {
                     new Node(Longs.generateUniqueTimeInMillis(), "127.0.0.1", 81),
                     new Redirect(new Url("http://127.0.0.1:80", false), new Url("http://127.0.0.1:80/home", false)),
                     new Redirect(new Url("http://blink.cool:80", false), new Url("http://blink.cool:80/home", false)),
+                    new Redirect(new Url("http://www.blink.cool:80", false), new Url("http://www.blink.cool:80/home", false)),
                     new Search(new Url("http://127.0.0.1:80/search", true), new Url("http://blink.cool:80/search", true)),
-                    new Home(new Url("http://127.0.0.1:80/home", true), new Url("http://blink.cool:80/home", true)),
-                    new cool.blink.site.htmltofront.create.HtmlToFront(new Url("http://127.0.0.1:80/htmltofront", true), new Url("http://blink.cool:80/htmltofront", true)),
-                    new cool.blink.site.htmltofront.read.HtmlToFront(new Url("http://127.0.0.1:80/htmltofront", true), new Url("http://blink.cool:80/htmltofront", true)),
-                    new cool.blink.site.scenariocreator.create.ScenarioCreator(new Url("http://127.0.0.1:80/scenariocreator", true), new Url("http://blink.cool:80/scenariocreator", true)),
-                    new cool.blink.site.scenariocreator.read.ScenarioCreator(new Url("http://127.0.0.1:80/scenariocreator", true), new Url("http://blink.cool:80/scenariocreator", true))
+                    new Home(new Url("http://127.0.0.1:80/home", true), new Url("http://blink.cool:80/home", true), new Url("http://www.blink.cool:80/home", true)),
+                    new cool.blink.site.htmltofront.create.HtmlToFront(new Url("http://127.0.0.1:80/htmltofront", true), new Url("http://blink.cool:80/htmltofront", true), new Url("http://www.blink.cool:80/htmltofront", true)),
+                    new cool.blink.site.htmltofront.read.HtmlToFront(new Url("http://127.0.0.1:80/htmltofront", true), new Url("http://blink.cool:80/htmltofront", true), new Url("http://www.blink.cool:80/htmltofront", true)),
+                    new cool.blink.site.scenariocreator.create.ScenarioCreator(new Url("http://127.0.0.1:80/scenariocreator", true), new Url("http://blink.cool:80/scenariocreator", true), new Url("http://www.blink.cool:80/scenariocreator", true)),
+                    new cool.blink.site.scenariocreator.read.ScenarioCreator(new Url("http://127.0.0.1:80/scenariocreator", true), new Url("http://blink.cool:80/scenariocreator", true), new Url("http://www.blink.cool:80/scenariocreator", true))
             );
             application.start();
         } catch (IOException | ClassNotFoundException | InvalidPortsException ex) {
