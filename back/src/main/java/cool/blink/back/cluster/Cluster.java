@@ -153,7 +153,7 @@ public class Cluster {
                             //5. If no node supports the request then send a redirect to the fail scenario
                             request.getHttpExchange().getResponseHeaders().add("Location", "/fail");
                             Blink.getWebServer().send(request, new Response(302, ""));
-                        } catch (IllegalAccessException | InstantiationException | InvocationTargetException | CloneNotSupportedException | IllegalArgumentException | NoSuchMethodException | SecurityException | IOException | InterruptedException ex) {
+                        } catch (NullPointerException | IllegalAccessException | InstantiationException | InvocationTargetException | CloneNotSupportedException | IllegalArgumentException | NoSuchMethodException | SecurityException | IOException | InterruptedException ex) {
                             ///TODO replace (request.toString() != null ? request.toString() : "request was null") with null
                             Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, (request.toString() != null ? request.toString() : "request was null"), ex);
                         }

@@ -139,7 +139,7 @@ public class WebServer {
             Request request;
             try {
                 request = new Request(httpExchange);
-            } catch (MalformedURLException ex) {
+            } catch (Exception ex) {
                 request = new Request(httpExchange, Blink.getFail().getUrls().get(0), null, Method.GET);
             }
             Blink.getNode().getRequestQueue().add(request);
