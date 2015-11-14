@@ -38,7 +38,7 @@ public class Application extends Blink {
                             add(new Result("Scenario Creator", "Utility for quickly generating the source code for scenarios"));
                         }
                     },
-                    new Fail(new Url("http://127.0.0.1:80/fail"), new Url("http://blink.cool:80/fail")),
+                    new Fail(new Url("http://127.0.0.1:80/fail", true), new Url("http://blink.cool:80/fail", true), new Url("http://www.blink.cool:80/fail", true)),
                     new WebServer(80),
                     new Cluster(3000, new Territory("127.0.0.1", 1, 65535, 250)),
                     new Node(Longs.generateUniqueTimeInMillis(), "127.0.0.1", 81),
