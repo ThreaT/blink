@@ -53,11 +53,6 @@ public class Method {
     }
 
     @Override
-    public String toString() {
-        return "Method{" + "clazz=" + clazz + ", name=" + name + ", parameterTypes=" + Arrays.toString(parameterTypes) + ", method=" + method + '}';
-    }
-
-    @Override
     public int hashCode() {
         int hash = 5;
         hash = 23 * hash + Objects.hashCode(this.clazz);
@@ -86,6 +81,11 @@ public class Method {
             return false;
         }
         return Objects.equals(this.method, other.method);
+    }
+
+    @Override
+    public String toString() {
+        return "Method{" + "clazz=" + clazz + ", name=" + name + ", parameterTypes=" + Arrays.toString(parameterTypes) + ", method=" + method + '}';
     }
 
 }

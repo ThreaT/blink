@@ -1,31 +1,24 @@
 package cool.blink.back.webserver;
 
 import cool.blink.back.core.Blink;
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
-import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsServer;
-import cool.blink.back.core.Http.Method;
 import cool.blink.back.core.Request;
 import cool.blink.back.core.Response;
-import cool.blink.back.utilities.HttpExchanges;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousServerSocketChannel;
+import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.CompletionHandler;
+import java.nio.charset.Charset;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.security.cert.CertificateException;
+import org.apache.commons.lang3.StringEscapeUtils;
 
 public class WebServer {
 
@@ -111,55 +104,50 @@ public class WebServer {
         this.keystorePassword = keystorePassword;
     }
 
-    public void startHttpServer() throws IOException {
-        this.httpServer.createContext("/", new DestinationHandler());
-        this.httpServer.setExecutor(null);
-        this.httpServer.start();
-    }
+    public void startHttpServer() {
+        try {
+            final AsynchronousServerSocketChannel listener = AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(this.httpPort));
+            listener.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
+                @Override
+                public void completed(AsynchronousSocketChannel asynchronousSocketChannel, Void att) {
+                    try {
+                        listener.accept(null, this);
 
-    public void startHttpsServer() throws CertificateException, IOException, KeyManagementException, KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException, java.security.cert.CertificateException {
-        char[] keystorePassword2 = this.keystorePassword.toCharArray();
-        SSLContext sslContext = SSLContext.getInstance("TLS");
-        KeyStore keyStore = KeyStore.getInstance("JKS");
-        keyStore.load(new FileInputStream(this.keystore), keystorePassword2);
-        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance("SunX509");
-        keyManagerFactory.init(keyStore, keystorePassword2);
-        sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
-        HttpsConfigurator configurator = new HttpsConfigurator(sslContext);
-        this.httpsServer.createContext("/", new DestinationHandler());
-        this.httpsServer.setHttpsConfigurator(configurator);
-        this.httpsServer.setExecutor(null);
-        this.httpsServer.start();
-    }
+                        //New Request
+                        ByteBuffer byteBuffer = ByteBuffer.allocate(4096);
+                        asynchronousSocketChannel.read(byteBuffer).get(2000, TimeUnit.SECONDS);
+                        byteBuffer.flip();
+                        Request request = new Request(asynchronousSocketChannel, byteBuffer, StringEscapeUtils.escapeJava(Charset.defaultCharset().decode(byteBuffer).toString()));
 
-    public class DestinationHandler implements HttpHandler {
+                        //Async Response
+                        Logger.getLogger(WebServer.class.getName()).log(Level.INFO, "New request to {0}", request.getUrl());
+                        Blink.getNode().getRequestQueue().add(request);
+                    } catch (InterruptedException | ExecutionException | TimeoutException ex) {
+                        Logger.getLogger(HttpServer.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
 
-        @Override
-        public void handle(HttpExchange httpExchange) {
-            Request request;
+                @Override
+                public void failed(Throwable exc, Void att) {
+                }
+            });
+        } catch (IOException ex) {
+        }
+        while (true) {
             try {
-                request = new Request(httpExchange);
-            } catch (Exception ex) {
-                request = new Request(httpExchange, Blink.getFail().getUrls().get(0), null, Method.GET);
+                Thread.sleep(Long.MAX_VALUE);
+            } catch (InterruptedException ex) {
             }
-            Blink.getNode().getRequestQueue().add(request);
-            Logger.getLogger(WebServer.class.getName()).log(Level.INFO, "New request to {0}", HttpExchanges.getAbsoluteUrl(request.getHttpExchange()));
         }
     }
 
     public void send(Request request, Response response) throws IOException, InterruptedException {
-        if (response.getCode() == 0) {
-            Logger.getLogger(WebServer.class.getName()).log(Level.SEVERE, "Response code was 0 when it probably should''ve been 200: Request: {0} response: {1}", new Object[]{request.toString(), response.toString()});
+        if (response.getHeaders().get(Response.HeaderFieldName.Status.toString()) == null) {
+            Logger.getLogger(WebServer.class.getName()).log(Level.SEVERE, "Response code was null when it probably should''ve been 200: Request: {0} response: {1}", new Object[]{request.toString(), response.toString()});
         }
-        if ((response.getContentType() != null) && (!response.getContentType().isEmpty())) {
-            request.getHttpExchange().getResponseHeaders().set("Content-Type", response.getContentType());
-        }
-        request.getHttpExchange().sendResponseHeaders(response.getCode(), response.getBytes().length);
-        try (OutputStream outputStream = request.getHttpExchange().getResponseBody()) {
-            outputStream.write(response.getBytes());
-        } catch (IOException ex) {
-
-        }
+        request.getAsynchronousSocketChannel().write(ByteBuffer.wrap(response.getBytes()));
+        request.getByteBuffer().clear();
+        request.getAsynchronousSocketChannel().close();
     }
 
 }

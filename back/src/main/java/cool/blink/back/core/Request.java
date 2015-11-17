@@ -1,106 +1,109 @@
 package cool.blink.back.core;
 
-import cool.blink.back.utilities.HttpExchanges;
-import com.sun.net.httpserver.HttpExchange;
-import java.io.IOException;
-import java.net.MalformedURLException;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.util.HashMap;
-import java.util.Objects;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.Map;
 
 public class Request {
 
-    private HttpExchange httpExchange;
-    private Url url;
-    private HashMap<String, String> parameters;
-    private Http.Method method;
+    private final AsynchronousSocketChannel asynchronousSocketChannel;
+    private final ByteBuffer byteBuffer;
+    private final String data;
+    private final Http.Method method;
+    private final Map<String, String> headers;
+    private final Url url;
+    private final HashMap<String, String> parameters;
 
-    public Request(HttpExchange httpExchange, Url url, HashMap<String, String> parameters, Http.Method method) {
-        this.httpExchange = httpExchange;
-        this.url = url;
-        this.parameters = parameters;
-        this.method = method;
+    public Request(final AsynchronousSocketChannel asynchronousSocketChannel, final ByteBuffer byteBuffer, final String data) {
+        this.asynchronousSocketChannel = asynchronousSocketChannel;
+        this.byteBuffer = byteBuffer;
+        this.data = data;
+        this.method = null;
+        this.headers = null;
+        this.url = null;
+        this.parameters = null;
     }
 
-    public Request(HttpExchange httpExchange) throws MalformedURLException {
-        try {
-            this.httpExchange = httpExchange;
-            this.url = new Url(HttpExchanges.getAbsoluteUrl(httpExchange));
-            this.parameters = HttpExchanges.getHttpExchangeParameters(httpExchange);
-            this.method = HttpExchanges.getHttpExchangeMethod(httpExchange);
-        } catch (IOException ex) {
-            //TODO Replace HttpExchanges.getAbsoluteUrl(httpExchange) with null after figuring out what's causing this
-            Logger.getLogger(Request.class.getName()).log(Level.SEVERE, HttpExchanges.getAbsoluteUrl(httpExchange), ex);
-        }
+    public final AsynchronousSocketChannel getAsynchronousSocketChannel() {
+        return asynchronousSocketChannel;
     }
 
-    public HttpExchange getHttpExchange() {
-        return httpExchange;
+    public final ByteBuffer getByteBuffer() {
+        return byteBuffer;
     }
 
-    public void setHttpExchange(HttpExchange httpExchange) {
-        this.httpExchange = httpExchange;
+    public final String getData() {
+        return data;
     }
 
-    public Url getUrl() {
+    public final Map<String, String> getHeaders() {
+        return headers;
+    }
+
+    public final Url getUrl() {
         return url;
     }
 
-    public void setUrl(Url url) {
-        this.url = url;
-    }
-
-    public HashMap<String, String> getParameters() {
+    public final HashMap<String, String> getParameters() {
         return parameters;
     }
 
-    public void setParameters(HashMap<String, String> parameters) {
-        this.parameters = parameters;
-    }
-
-    public Http.Method getMethod() {
+    public final Http.Method getMethod() {
         return method;
     }
 
-    public void setMethod(Http.Method method) {
-        this.method = method;
-    }
+    public enum HeaderFieldName {
 
-    @Override
-    public int hashCode() {
-        int hash = 7;
-        hash = 37 * hash + Objects.hashCode(this.httpExchange);
-        hash = 37 * hash + Objects.hashCode(this.url);
-        hash = 37 * hash + Objects.hashCode(this.parameters);
-        hash = 37 * hash + Objects.hashCode(this.method);
-        return hash;
-    }
+        Accept("Accept"),
+        Accept_Charset("Accept-Charset"),
+        Accept_Datetime("Accept-Datetime"),
+        Accept_Encoding("Accept-Encoding"),
+        Accept_Language("Accept-Language"),
+        Authorization("Authorization"),
+        Cache_Control("Cache-Control"),
+        Connection("Connection"),
+        Content_Length("Content-Length"),
+        Content_MD5("Content-MD5"),
+        Content_Type("Content-Type"),
+        Cookie("Cookie"),
+        Date("Date"),
+        Expect("Expect"),
+        From("From"),
+        Host("Host"),
+        If_Match("If-Match"),
+        If_Modified_Since("If-Modified-Since"),
+        If_None_Match("If-None-Match"),
+        If_Range("If-Range"),
+        If_Unmodified_Since("If-Unmodified-Since"),
+        Max_Forwards("Max-Forwards"),
+        Origin("Origin"),
+        Pragma("Pragma"),
+        Proxy_Authorization("Proxy-Authorization"),
+        Range("Range"),
+        Referer("Referer"),
+        TE("TE"),
+        Upgrade("Upgrade"),
+        User_Agent("User-Agent"),
+        Via("Via"),
+        Warning("Warning");
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
+        private final String headerFieldName;
+
+        private HeaderFieldName(final String headerFieldName) {
+            this.headerFieldName = headerFieldName;
         }
-        if (getClass() != obj.getClass()) {
-            return false;
+
+        @Override
+        public final String toString() {
+            return headerFieldName;
         }
-        final Request other = (Request) obj;
-        if (!Objects.equals(this.httpExchange, other.httpExchange)) {
-            return false;
-        }
-        if (!Objects.equals(this.url, other.url)) {
-            return false;
-        }
-        if (!Objects.equals(this.parameters, other.parameters)) {
-            return false;
-        }
-        return this.method == other.method;
+
     }
 
     @Override
     public String toString() {
-        return "Request{" + "httpExchange=" + httpExchange + ", url=" + url + ", parameters=" + parameters + ", method=" + method + '}';
+        return "Request{" + "asynchronousSocketChannel=" + asynchronousSocketChannel + ", byteBuffer=" + byteBuffer + ", data=" + data + ", headers=" + headers + ", url=" + url + ", parameters=" + parameters + ", method=" + method + '}';
     }
 
 }
