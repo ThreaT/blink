@@ -1,40 +1,34 @@
 package cool.blink.back.core;
 
-import cool.blink.back.utilities.Headers;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 public final class Response {
 
-    private final Map<String, String> headers;
-    /**
-     * Generally contains the objects that build the response payload.
-     *
-     * @param httpExchange httpExchange
-     * @param request request
-     * @return response response
-     */
+    private final Map<HeaderFieldName, String> headers;
+    private Status status;
     private final String payload;
-    private final String data;
-    private final byte[] bytes;
+    private String data;
 
-    public Response() {
+    public Response(final Status status, final String payload) {
         this.headers = new HashMap<>();
-        this.payload = "";
-        this.data = "";
-        this.bytes = this.data.getBytes();
-    }
-
-    public Response(final Map<String, String> headers, final String payload) {
-        this.headers = headers;
+        this.headers.put(HeaderFieldName.Status, status.toString());
+        this.headers.put(HeaderFieldName.Content_Type, "Content-Type: text/html; charset=UTF-8");
+        this.status = status;
         this.payload = payload;
-        this.data = Headers.headersToString(headers) + "\\r\\n" + payload;
-        this.bytes = this.data.getBytes();
+        this.data = "HTTP/1.0" + " " + this.status.name().substring(1) + " " + this.headers.get(HeaderFieldName.Status) + "\r\n" + getHeadersFromHeaderMap(this.headers) + "\r\n" + payload;
     }
 
-    public final Map<String, String> getHeaders() {
+    public final Map<HeaderFieldName, String> getHeaders() {
         return headers;
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
     }
 
     public final String getPayload() {
@@ -42,11 +36,12 @@ public final class Response {
     }
 
     public final String getData() {
+        this.data = "HTTP/1.0" + " " + this.status.name().substring(1) + " " + this.headers.get(HeaderFieldName.Status) + "\r\n" + getHeadersFromHeaderMap(this.headers) + "\r\n" + payload;
         return data;
     }
 
-    public final byte[] getBytes() {
-        return bytes;
+    public void setData(String data) {
+        this.data = data;
     }
 
     public enum HeaderFieldName {
@@ -122,7 +117,7 @@ public final class Response {
         $303("See Other"),
         $304("Not Modified"),
         $305("Use Proxy"),
-        $306("(Reserved)"),
+        $306("Switch Proxy"),
         $307("Temporary Redirect"),
         $400("Bad Request"),
         $401("Unauthorized"),
@@ -145,7 +140,6 @@ public final class Response {
         $422("Unprocessable Entity"),
         $423("Locked"),
         $424("Failed Dependency"),
-        $5xx("Server Error"),
         $500("Internal Server Error"),
         $501("Not Implemented"),
         $502("Bad Gateway"),
@@ -162,14 +156,33 @@ public final class Response {
 
         @Override
         public final String toString() {
-            return "Status{" + "status=" + status + '}';
+            return this.status;
         }
 
     }
 
+    public static final synchronized Status getStatusFromInteger(final Integer integer) {
+        for (Status status : Status.values()) {
+            if (("$" + integer).equals(status.name())) {
+                return status;
+            }
+        }
+        return null;
+    }
+
+    public static final synchronized String getHeadersFromHeaderMap(final Map<HeaderFieldName, String> headerMap) {
+        String headers = "";
+        for (Map.Entry<HeaderFieldName, String> header : headerMap.entrySet()) {
+            if (header.getKey() != HeaderFieldName.Status) {
+                headers += header.getKey().toString() + ": " + header.getValue() + "\r\n";
+            }
+        }
+        return headers;
+    }
+
     @Override
-    public final String toString() {
-        return "Response{" + "headers=" + headers + ", payload=" + payload + ", data=" + data + ", bytes=" + Arrays.toString(bytes) + '}';
+    public String toString() {
+        return "Response{" + "headers=" + headers + ", status=" + status + ", payload=" + payload + ", data=" + getData() + '}';
     }
 
 }

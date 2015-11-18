@@ -4,7 +4,6 @@ import cool.blink.back.core.Report;
 import cool.blink.back.core.Request;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
-import cool.blink.back.utilities.Urls;
 import cool.blink.site.Application;
 import cool.blink.site.home.read.Home;
 import java.io.IOException;
@@ -20,17 +19,13 @@ public class HtmlToFront extends Scenario {
     @Override
     public Boolean fit(Request request) {
         Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running fit: {0}", this.toString());
-        return Urls.hasMatchingAbsoluteUrls(request.getUrl(), this.getUrls());
+        return Url.hasMatchingAbsoluteUrls(request.getUrl(), this.getUrls());
     }
 
     @Override
     public void main(Request request) {
         Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running main: {0}", this.toString());
-        try {
-            Application.getWebServer().send(request, cool.blink.site.htmltofront.create.HtmlToFront.htmlToFrontTemplate);
-        } catch (IOException | InterruptedException ex) {
-            Logger.getLogger(HtmlToFront.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        Application.getWebServer().respond(request, cool.blink.site.htmltofront.create.HtmlToFront.htmlToFrontTemplate.getResponse());
     }
 
     /**

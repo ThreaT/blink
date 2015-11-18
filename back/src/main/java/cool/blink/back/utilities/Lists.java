@@ -4,8 +4,13 @@ import java.util.List;
 
 public class Lists {
 
-    public static final synchronized Boolean containsIgnoreCase(final String string, final List<String> list) {
-        return list.stream().anyMatch((s) -> (string.equalsIgnoreCase(s)));
+    public static final synchronized Boolean containsIgnoreCase(final String string, final List<?> list) {
+        for (Object object : list) {
+            if (string.toLowerCase().contains(object.toString().toLowerCase())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static final synchronized Boolean containEqualContents(final List<String> list1, final List<String> list2) {

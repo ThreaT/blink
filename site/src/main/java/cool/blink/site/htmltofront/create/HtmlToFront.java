@@ -3,6 +3,7 @@ package cool.blink.site.htmltofront.create;
 import cool.blink.back.core.Report;
 import cool.blink.back.core.Request;
 import cool.blink.back.core.Response;
+import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
 import cool.blink.front.Document;
@@ -69,9 +70,9 @@ public class HtmlToFront extends Scenario {
         try {
             String html = request.getParameters().get("html");
             String front = convertAllElements(html);
-            Response response = new HtmlToFrontTemplate(html, front);
-            Application.getWebServer().send(request, response);
-        } catch (IOException | InterruptedException ex) {
+            Response response = new HtmlToFrontTemplate(html, front).getResponse();
+            Application.getWebServer().respond(request, response);
+        } catch (IOException ex) {
             Logger.getLogger(HtmlToFront.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -101,8 +102,9 @@ public class HtmlToFront extends Scenario {
         return report;
     }
 
-    public static final class HtmlToFrontTemplate extends Response {
+    public static final class HtmlToFrontTemplate {
 
+        private Response response;
         private final Document document;
         private final Html html;
         private final Head head;
@@ -157,8 +159,7 @@ public class HtmlToFront extends Scenario {
                                     )
                             )
                     );
-            super.setCode(200);
-            super.setPayload(this.document.print());
+            this.response = new Response(Status.$200, this.document.print());
         }
 
         public HtmlToFrontTemplate(final String html, final String front) {
@@ -176,8 +177,15 @@ public class HtmlToFront extends Scenario {
             this.copyToClipboard = htmlToFrontTemplate.getCopyToClipboard();
             //Textarea newFrontContent = (Textarea) new Textarea().append(new Id("front")).append(new Style(new Width(100, WidthValue.percent), new Height(100, HeightValue.percent))).append(new Text(front));
             this.document = htmlToFrontTemplate.getDocument().replaceAll(htmlToFrontTemplate.getHtmlContent(), this.htmlContent).replaceAll(htmlToFrontTemplate.getFrontContent(), this.frontContent);
-            super.setCode(200);
-            super.setPayload(this.document.print());
+            this.response = new Response(Status.$200, this.document.print());
+        }
+
+        public Response getResponse() {
+            return response;
+        }
+
+        public void setResponse(Response response) {
+            this.response = response;
         }
 
         public final Document getDocument() {

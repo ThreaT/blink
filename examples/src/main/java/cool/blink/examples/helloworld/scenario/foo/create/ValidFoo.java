@@ -6,6 +6,7 @@ import cool.blink.back.core.Request;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.utilities.Longs;
 import cool.blink.back.core.Response;
+import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Url;
 import cool.blink.examples.helloworld.table.Foo;
 import cool.blink.front.Document;
@@ -18,7 +19,6 @@ import cool.blink.front.html.element.Html;
 import cool.blink.front.html.element.Meta;
 import cool.blink.front.html.element.Title;
 import cool.blink.front.html.property.value.HttpEquivValue;
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -53,8 +53,8 @@ public class ValidFoo extends Scenario {
             Foo foo = new Foo(Longs.generateUniqueId(), Foo.class.getSimpleName().toLowerCase());
             foo.setName(request.getParameters().get("name"));
             Blink.getDatabase().createPhysicalRecord(Blink.getDatabase().populateRecordDatabaseAndTableAndCells(foo));
-            Blink.getWebServer().send(request, new ValidFooTemplate(foo));
-        } catch (SQLException | ClassNotFoundException | IllegalAccessException | IllegalArgumentException | InstantiationException | IOException | InterruptedException ex) {
+            Blink.getWebServer().respond(request, new ValidFooTemplate(foo).getResponse());
+        } catch (SQLException | ClassNotFoundException | IllegalAccessException | IllegalArgumentException | InstantiationException ex) {
             Logger.getLogger(ValidFoo.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -93,8 +93,9 @@ public class ValidFoo extends Scenario {
         return report;
     }
 
-    public static class ValidFooTemplate extends Response {
+    public static class ValidFooTemplate {
 
+        private Response response;
         private final Document document;
         private final Html html;
         private final Head head;
@@ -121,7 +122,7 @@ public class ValidFoo extends Scenario {
                             this.body
                     )
             );
-            super.setPayload(document.toString());
+            this.response = new Response(Status.$200, this.document.print());
         }
 
         public ValidFooTemplate(Foo foo) {
@@ -132,7 +133,15 @@ public class ValidFoo extends Scenario {
             this.foo = validFooTemplate.getFoo();
             this.body = validFooTemplate.getBody();
             this.document = validFooTemplate.getDocument().replaceAll(this.body, new Body().append(new Text("Valid Foo: " + foo.getName())));
-            super.setPayload(document.toString());
+            this.response = new Response(Status.$200, this.document.print());
+        }
+
+        public Response getResponse() {
+            return response;
+        }
+
+        public void setResponse(Response response) {
+            this.response = response;
         }
 
         public final Document getDocument() {

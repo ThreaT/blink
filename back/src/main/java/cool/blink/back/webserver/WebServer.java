@@ -1,13 +1,15 @@
 package cool.blink.back.webserver;
 
 import cool.blink.back.core.Blink;
-import com.sun.net.httpserver.HttpServer;
-import com.sun.net.httpserver.HttpsServer;
 import cool.blink.back.core.Request;
 import cool.blink.back.core.Response;
+import cool.blink.back.exception.CorruptHeadersException;
+import cool.blink.back.exception.CorruptMethodException;
+import cool.blink.back.exception.CorruptProtocolException;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
@@ -20,18 +22,17 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.lang3.StringEscapeUtils;
 
-public class WebServer {
+public class WebServer extends Thread {
 
-    private HttpServer httpServer;
-    private HttpsServer httpsServer;
+    private Boolean running;
+    private AsynchronousServerSocketChannel asynchronousServerSocketChannel;
     private Integer httpPort;
     private Integer httpsPort;
     private File keystore;
     private String keystorePassword;
 
     public WebServer() {
-        this.httpServer = null;
-        this.httpsServer = null;
+        this.running = true;
         this.httpPort = -1;
         this.httpsPort = -1;
         this.keystore = null;
@@ -39,8 +40,7 @@ public class WebServer {
     }
 
     public WebServer(Integer httpPort) throws IOException {
-        this.httpServer = HttpServer.create(new InetSocketAddress(httpPort), 0);
-        this.httpsServer = null;
+        this.running = true;
         this.httpPort = httpPort;
         this.httpsPort = -1;
         this.keystore = null;
@@ -48,28 +48,15 @@ public class WebServer {
     }
 
     public WebServer(Integer httpPort, Integer httpsPort, File keystore, String keystorePassword) throws IOException {
-        this.httpServer = HttpServer.create(new InetSocketAddress(httpPort), 0);
-        this.httpsServer = HttpsServer.create(new InetSocketAddress(httpsPort), 0);
+        this.running = true;
         this.httpPort = httpPort;
         this.httpsPort = httpsPort;
         this.keystore = keystore;
         this.keystorePassword = keystorePassword;
     }
 
-    public HttpServer getHttpServer() {
-        return httpServer;
-    }
-
-    public void setHttpServer(HttpServer httpServer) {
-        this.httpServer = httpServer;
-    }
-
-    public HttpsServer getHttpsServer() {
-        return httpsServer;
-    }
-
-    public void setHttpsServer(HttpsServer httpsServer) {
-        this.httpsServer = httpsServer;
+    public AsynchronousServerSocketChannel getAsynchronousServerSocketChannel() {
+        return asynchronousServerSocketChannel;
     }
 
     public Integer getHttpPort() {
@@ -104,14 +91,15 @@ public class WebServer {
         this.keystorePassword = keystorePassword;
     }
 
-    public void startHttpServer() {
+    @Override
+    public void run() {
         try {
-            final AsynchronousServerSocketChannel listener = AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(this.httpPort));
-            listener.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
+            this.asynchronousServerSocketChannel = AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(this.httpPort));
+            asynchronousServerSocketChannel.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
                 @Override
                 public void completed(AsynchronousSocketChannel asynchronousSocketChannel, Void att) {
                     try {
-                        listener.accept(null, this);
+                        asynchronousServerSocketChannel.accept(null, this);
 
                         //New Request
                         ByteBuffer byteBuffer = ByteBuffer.allocate(4096);
@@ -122,8 +110,8 @@ public class WebServer {
                         //Async Response
                         Logger.getLogger(WebServer.class.getName()).log(Level.INFO, "New request to {0}", request.getUrl());
                         Blink.getNode().getRequestQueue().add(request);
-                    } catch (InterruptedException | ExecutionException | TimeoutException ex) {
-                        Logger.getLogger(HttpServer.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch (InterruptedException | ExecutionException | TimeoutException | MalformedURLException | CorruptHeadersException | CorruptProtocolException | CorruptMethodException ex) {
+                        Logger.getLogger(WebServer.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
 
@@ -133,7 +121,7 @@ public class WebServer {
             });
         } catch (IOException ex) {
         }
-        while (true) {
+        while (this.running) {
             try {
                 Thread.sleep(Long.MAX_VALUE);
             } catch (InterruptedException ex) {
@@ -141,13 +129,24 @@ public class WebServer {
         }
     }
 
-    public void send(Request request, Response response) throws IOException, InterruptedException {
-        if (response.getHeaders().get(Response.HeaderFieldName.Status.toString()) == null) {
-            Logger.getLogger(WebServer.class.getName()).log(Level.SEVERE, "Response code was null when it probably should''ve been 200: Request: {0} response: {1}", new Object[]{request.toString(), response.toString()});
+    public void end() {
+        this.running = false;
+        try {
+            this.asynchronousServerSocketChannel.close();
+        } catch (IOException ex) {
+            Logger.getLogger(WebServer.class.getName()).log(Level.SEVERE, null, ex);
         }
-        request.getAsynchronousSocketChannel().write(ByteBuffer.wrap(response.getBytes()));
+        this.interrupt();
+    }
+
+    public void respond(Request request, Response response) {
+        request.getAsynchronousSocketChannel().write(ByteBuffer.wrap(response.getData().getBytes()));
         request.getByteBuffer().clear();
-        request.getAsynchronousSocketChannel().close();
+        try {
+            request.getAsynchronousSocketChannel().close();
+        } catch (IOException ex) {
+            Logger.getLogger(WebServer.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
 }

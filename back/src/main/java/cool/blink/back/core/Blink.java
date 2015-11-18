@@ -8,10 +8,6 @@ import cool.blink.back.session.Session;
 import cool.blink.back.utilities.Logs;
 import cool.blink.back.webserver.WebServer;
 import java.io.IOException;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,7 +16,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.security.cert.CertificateException;
 
 public abstract class Blink {
 
@@ -167,12 +162,8 @@ public abstract class Blink {
 
     public void start() {
         try {
-            webServer.startHttpServer();
-            Logger.getLogger(Blink.class.getName()).log(Level.INFO, "HTTP Server Started.");
-            if (webServer.getHttpsPort() != -1) {
-                webServer.startHttpsServer();
-                Logger.getLogger(Blink.class.getName()).log(Level.INFO, "HTTPS Server Started.");
-            }
+            Blink.webServer.start();
+            Logger.getLogger(Blink.class.getName()).log(Level.INFO, "WebServer Started.");
             Blink.cluster.getHttpRequestHandler().start();
             Logger.getLogger(Blink.class.getName()).log(Level.INFO, "Http Request Handler Started.");
             Blink.cluster.getSocketHandler().start();
@@ -189,13 +180,10 @@ public abstract class Blink {
                 Blink.cluster.getDatabaseActionExecutor().start();
                 Logger.getLogger(Blink.class.getName()).log(Level.INFO, "Database Action Executor Started.");
             }
-        } catch (SQLException | ClassNotFoundException | IllegalAccessException | InstantiationException | CertificateException | IOException | KeyManagementException | KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException | java.security.cert.CertificateException ex) {
+        } catch (SQLException | ClassNotFoundException | IllegalAccessException | InstantiationException ex) {
             Logger.getLogger(Blink.class.getName()).log(Level.SEVERE, null, ex);
-            if (webServer.getHttpServer() != null) {
-                webServer.getHttpServer().stop(webServer.getHttpPort());
-            }
-            if (webServer.getHttpsServer() != null) {
-                webServer.getHttpsServer().stop(webServer.getHttpsPort());
+            if (webServer != null) {
+                webServer.end();
             }
             try {
                 if (database != null) {

@@ -3,9 +3,9 @@ package cool.blink.site.scenariocreator.read;
 import cool.blink.back.core.Report;
 import cool.blink.back.core.Request;
 import cool.blink.back.core.Response;
+import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
-import cool.blink.back.utilities.Urls;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.Placeholder;
@@ -54,17 +54,13 @@ public class ScenarioCreator extends Scenario {
     @Override
     public Boolean fit(Request request) {
         Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running fit: {0}", this.toString());
-        return Urls.hasMatchingAbsoluteUrls(request.getUrl(), this.getUrls());
+        return Url.hasMatchingAbsoluteUrls(request.getUrl(), this.getUrls());
     }
 
     @Override
     public void main(Request request) {
         Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running main: {0}", this.toString());
-        try {
-            Application.getWebServer().send(request, scenarioCreatorTemplate);
-        } catch (IOException | InterruptedException ex) {
-            Logger.getLogger(ScenarioCreator.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        Application.getWebServer().respond(request, scenarioCreatorTemplate.getResponse());
     }
 
     /**
@@ -92,8 +88,9 @@ public class ScenarioCreator extends Scenario {
         return report;
     }
 
-    public static final class ScenarioCreatorTemplate extends Response {
+    public static final class ScenarioCreatorTemplate {
 
+        private Response response;
         private final Document document;
         private final Html html;
         private final Head head;
@@ -267,8 +264,15 @@ public class ScenarioCreator extends Scenario {
                             )
                     )
             );
-            super.setCode(200);
-            super.setPayload(this.document.print());
+            this.response = new Response(Status.$200, this.document.print());
+        }
+
+        public Response getResponse() {
+            return response;
+        }
+
+        public void setResponse(Response response) {
+            this.response = response;
         }
 
         public Document getDocument() {

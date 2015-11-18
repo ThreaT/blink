@@ -3,6 +3,7 @@ package cool.blink.site.scenariocreator.create;
 import cool.blink.back.core.Report;
 import cool.blink.back.core.Request;
 import cool.blink.back.core.Response;
+import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
 import cool.blink.front.Document;
@@ -143,8 +144,9 @@ public class ScenarioCreator extends Scenario {
         return report;
     }
 
-    public static final class ScenarioCreatorTemplate extends Response {
+    public static final class ScenarioCreatorTemplate {
 
+        private Response response;
         private final Document document;
         private final Html html;
         private final Head head;
@@ -203,7 +205,7 @@ public class ScenarioCreator extends Scenario {
                                     )
                             )
                     );
-            super.setPayload(document.print());
+            this.response = new Response(Status.$200, this.document.print());
         }
 
         public ScenarioCreatorTemplate(final String front) {
@@ -222,6 +224,15 @@ public class ScenarioCreator extends Scenario {
             this.copyToClipboard = scenarioCreatorTemplate.getCopyToClipboard();
             Textarea newFrontContent = (Textarea) new Textarea().append(new Id("front")).append(new Style(new Width(100, WidthValue.percent), new Height(100, HeightValue.percent))).append(new Text(front));
             this.document = scenarioCreatorTemplate.getDocument().replaceAll(this.frontContent, newFrontContent);
+            this.response = new Response(Status.$200, this.document.print());
+        }
+
+        public Response getResponse() {
+            return response;
+        }
+
+        public void setResponse(Response response) {
+            this.response = response;
         }
 
         public final Document getDocument() {

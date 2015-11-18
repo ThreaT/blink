@@ -4,6 +4,7 @@ import cool.blink.back.core.Blink;
 import cool.blink.back.core.Report;
 import cool.blink.back.core.Request;
 import cool.blink.back.core.Response;
+import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
 import cool.blink.front.Document;
@@ -39,7 +40,6 @@ import cool.blink.front.html.property.value.WidthValue;
 import cool.blink.front.template.javascript.InnerHtml;
 import cool.blink.front.template.javascript.Value;
 import cool.blink.front.template.javascript.WebSocket;
-import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -60,11 +60,7 @@ public class Home extends Scenario {
     @Override
     public void main(Request request) {
         Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running...");
-        try {
-            Blink.getWebServer().send(request, homeTemplate);
-        } catch (IOException | InterruptedException ex) {
-            Logger.getLogger(Home.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        Blink.getWebServer().respond(request, homeTemplate.getResponse());
     }
 
     /**
@@ -94,8 +90,9 @@ public class Home extends Scenario {
         return report;
     }
 
-    public static final class HomeTemplate extends Response {
+    public static final class HomeTemplate {
 
+        private Response response;
         private final Document document;
         private final Html html;
         private final Head head;
@@ -167,7 +164,15 @@ public class Home extends Scenario {
                             )
                     )
             );
-            super.setPayload(document.toString());
+            this.response = new Response(Status.$200, this.document.print());
+        }
+
+        public Response getResponse() {
+            return response;
+        }
+
+        public void setResponse(Response response) {
+            this.response = response;
         }
 
         public final Document getDocument() {

@@ -1,7 +1,6 @@
 package cool.blink.back.core;
 
-import cool.blink.back.utilities.Urls;
-import java.io.IOException;
+import cool.blink.back.core.Response.Status;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -24,17 +23,13 @@ public final class Fail extends Scenario {
 
     @Override
     public final Boolean fit(Request request) {
-        return Urls.hasMatchingAbsoluteUrls(request.getUrl(), this.getUrls());
+        return Url.hasMatchingAbsoluteUrls(request.getUrl(), this.getUrls());
     }
 
     @Override
     public void main(Request request) {
         Logger.getLogger(Fail.class.getName()).log(Level.INFO, "Running Fail: main(Request request)");
-        try {
-            Blink.getWebServer().send(request, failTemplate);
-        } catch (IOException | InterruptedException ex) {
-            Logger.getLogger(Fail.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        Blink.getWebServer().respond(request, failTemplate.getResponse());
     }
 
     @Override
@@ -44,11 +39,20 @@ public final class Fail extends Scenario {
         return report;
     }
 
-    public static final class FailTemplate extends Response {
+    public static final class FailTemplate {
+
+        private Response response;
 
         public FailTemplate() {
-            super.setCode(500);
-            super.setPayload("There was a problem processing your request.");
+            this.response = new Response(Status.$500, "There was a problem processing your request.");
+        }
+
+        public final Response getResponse() {
+            return response;
+        }
+
+        public final void setResponse(final Response response) {
+            this.response = response;
         }
 
     }

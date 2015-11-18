@@ -30,7 +30,7 @@ public class Application extends Blink {
 
     public static void main(String args[]) {
         try {
-            Blink.enableFileLogging("blink site 1", Level.SEVERE);
+            //Blink.enableFileLogging("blink site 1", Level.SEVERE);
             application = new Application(
                     new ArrayList<Result>() {
                         {

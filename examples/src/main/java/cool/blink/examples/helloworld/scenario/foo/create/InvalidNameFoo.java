@@ -5,8 +5,8 @@ import cool.blink.back.core.Request;
 import cool.blink.back.core.Scenario;
 import cool.blink.examples.helloworld.Application;
 import cool.blink.back.core.Response;
+import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Url;
-import cool.blink.back.utilities.Urls;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.Content;
@@ -17,7 +17,6 @@ import cool.blink.front.html.element.Html;
 import cool.blink.front.html.element.Meta;
 import cool.blink.front.html.element.Title;
 import cool.blink.front.html.property.value.HttpEquivValue;
-import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -32,7 +31,7 @@ public final class InvalidNameFoo extends Scenario {
     @Override
     public final Boolean fit(final Request request) {
         Logger.getLogger(InvalidNameFoo.class.getName()).log(Level.INFO, "Running fit: {0}", this.toString());
-        Boolean urlsMatch = Urls.hasMatchingAbsoluteUrls(request.getUrl(), this.getUrls());
+        Boolean urlsMatch = Url.hasMatchingAbsoluteUrls(request.getUrl(), this.getUrls());
         Boolean hasNoParameters = request.getParameters() == null;
         Boolean hasNullName = (request.getParameters().containsKey("name")) && ((request.getParameters().get("name") == null) || (request.getParameters().get("name").equals("")));
         return ((urlsMatch) && (hasNoParameters || hasNullName));
@@ -41,11 +40,7 @@ public final class InvalidNameFoo extends Scenario {
     @Override
     public final void main(final Request request) {
         Logger.getLogger(InvalidNameFoo.class.getName()).log(Level.INFO, "Running main: {0}", this.toString());
-        try {
-            Application.getWebServer().send(request, invalidNameFooTemplate);
-        } catch (InterruptedException | IOException ex) {
-            Logger.getLogger(InvalidNameFoo.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        Application.getWebServer().respond(request, invalidNameFooTemplate.getResponse());
     }
 
     /**
@@ -72,8 +67,9 @@ public final class InvalidNameFoo extends Scenario {
         return report;
     }
 
-    public static final class InvalidNameFooTemplate extends Response {
+    public static final class InvalidNameFooTemplate {
 
+        private Response response;
         private final Document document;
         private final Html html;
         private final Head head;
@@ -98,8 +94,15 @@ public final class InvalidNameFoo extends Scenario {
                             this.body
                     )
             );
-            super.setCode(200);
-            super.setPayload(this.document.print());
+            this.response = new Response(Status.$200, this.document.print());
+        }
+
+        public Response getResponse() {
+            return response;
+        }
+
+        public void setResponse(Response response) {
+            this.response = response;
         }
 
         public final Document getDocument() {

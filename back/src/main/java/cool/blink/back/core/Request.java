@@ -1,28 +1,39 @@
 package cool.blink.back.core;
 
+import cool.blink.back.exception.CorruptHeadersException;
+import cool.blink.back.exception.CorruptMethodException;
+import cool.blink.back.exception.CorruptProtocolException;
+import cool.blink.back.utilities.Lists;
+import java.net.MalformedURLException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 
-public class Request {
+public final class Request {
 
     private final AsynchronousSocketChannel asynchronousSocketChannel;
     private final ByteBuffer byteBuffer;
     private final String data;
     private final Http.Method method;
-    private final Map<String, String> headers;
+    private final Map<HeaderFieldName, String> headers;
+    private final Integer port;
+    private final Map<String, String> parameters;
     private final Url url;
-    private final HashMap<String, String> parameters;
 
-    public Request(final AsynchronousSocketChannel asynchronousSocketChannel, final ByteBuffer byteBuffer, final String data) {
+    public Request(final AsynchronousSocketChannel asynchronousSocketChannel, final ByteBuffer byteBuffer, final String data) throws MalformedURLException, CorruptHeadersException, CorruptProtocolException, CorruptMethodException {
         this.asynchronousSocketChannel = asynchronousSocketChannel;
         this.byteBuffer = byteBuffer;
         this.data = data;
-        this.method = null;
-        this.headers = null;
-        this.url = null;
-        this.parameters = null;
+        this.method = getMethodFromRequestData();
+        this.headers = getHeadersFromRequestData();
+        this.port = Blink.getWebServer().getHttpPort();
+        this.parameters = getParametersFromRequestData();
+        this.url = new Url(getProtocolFromRequestData() + this.headers.get(HeaderFieldName.Host) + ":" + this.port + getPathFromRequestData() + parametersToQueryString(this.parameters));
     }
 
     public final AsynchronousSocketChannel getAsynchronousSocketChannel() {
@@ -37,7 +48,7 @@ public class Request {
         return data;
     }
 
-    public final Map<String, String> getHeaders() {
+    public final Map<HeaderFieldName, String> getHeaders() {
         return headers;
     }
 
@@ -45,7 +56,7 @@ public class Request {
         return url;
     }
 
-    public final HashMap<String, String> getParameters() {
+    public final Map<String, String> getParameters() {
         return parameters;
     }
 
@@ -101,9 +112,129 @@ public class Request {
 
     }
 
+    public static final synchronized HeaderFieldName getHeaderFieldNameFromString(final String string) {
+        List<HeaderFieldName> headerFieldNames = new ArrayList<>(Arrays.asList(HeaderFieldName.values()));
+        for (HeaderFieldName headerFieldName : headerFieldNames) {
+            if (headerFieldName.toString().equalsIgnoreCase(string)) {
+                return headerFieldName;
+            }
+        }
+        return null;
+    }
+
+    public final Http.Protocol getProtocolFromRequestData() throws CorruptProtocolException {
+        List<Http.Protocol> httpProtocols = new ArrayList<>(Arrays.asList(Http.Protocol.values()));
+        for (Http.Protocol httpProtocol : httpProtocols) {
+            if ((this.data.contains("\\r") && (this.data.substring(0, this.data.indexOf("\\r")).toLowerCase().contains((httpProtocol.name() + "/").toLowerCase())))) {
+                return httpProtocol;
+            }
+        }
+        throw new CorruptProtocolException();
+    }
+
+    public final String getPathFromRequestData() {
+        String firstLineOfRequest = this.data.substring(0, this.data.indexOf("\\r\\n"));
+        if (StringUtils.countMatches(firstLineOfRequest, " ") == 2) {
+            return firstLineOfRequest.substring(firstLineOfRequest.indexOf(" ") + 1, firstLineOfRequest.indexOf(" ", firstLineOfRequest.indexOf(" ") + 2));
+        } else {
+            return "";
+        }
+    }
+
+    public final Http.Method getMethodFromRequestData() throws CorruptMethodException {
+        List<Http.Method> httpMethods = new ArrayList<>(Arrays.asList(Http.Method.values()));
+        for (Http.Method httpMethod : httpMethods) {
+            if (httpMethod.toString().equalsIgnoreCase(this.data.substring(0, httpMethod.toString().length()))) {
+                return httpMethod;
+            }
+        }
+        throw new CorruptMethodException();
+    }
+
+    public final Map<HeaderFieldName, String> getHeadersFromRequestData() throws CorruptHeadersException {
+        Map<HeaderFieldName, String> headers1 = new HashMap<>();
+        List<HeaderFieldName> headerFieldNames = new ArrayList<>(Arrays.asList(HeaderFieldName.values()));
+        //Isolate headers
+        List<String> isolatedHeaders;
+        if ((!this.data.contains("\\r\\n")) || (!this.data.contains("\\r\\n\\r\\n"))) {
+            throw new CorruptHeadersException();
+        } else {
+            isolatedHeaders = new ArrayList<>();
+            String temp = this.data.substring(this.data.indexOf("\\r\\n") + 4, this.data.indexOf("\\r\\n\\r\\n"));
+            while (temp.contains("\\r\\n\\r\\n")) {
+                temp = temp.replaceAll("\\r\\n\\r\\n", "\\r\\n");
+            }
+            while (!temp.equals("")) {
+                String header;
+                if (temp.contains("\\r\\n")) {
+                    header = temp.substring(0, temp.indexOf("\\r\\n") + 4);
+                } else {
+                    header = temp.substring(0, temp.length());
+                }
+                if (header.contains(":")) {
+                    if (temp.contains("\\r\\n")) {
+                        isolatedHeaders.add(temp.substring(0, temp.indexOf("\\r\\n")));
+                    } else {
+                        isolatedHeaders.add(temp.substring(0, temp.length()));
+                    }
+                }
+                if (temp.contains("\\r\\n")) {
+                    temp = temp.substring(temp.indexOf("\\r\\n") + 4, temp.length());
+                } else {
+                    temp = "";
+                }
+            }
+            for (String isolatedHeader : isolatedHeaders) {
+                if (Lists.containsIgnoreCase(isolatedHeader, headerFieldNames)) {
+                    HeaderFieldName key = getHeaderFieldNameFromString(isolatedHeader.substring(0, isolatedHeader.indexOf(":")));
+                    String value = isolatedHeader.substring(isolatedHeader.indexOf(":") + 2, isolatedHeader.length());
+                    headers1.put(key, value);
+                }
+            }
+        }
+        return headers1;
+    }
+
+    public final Map<String, String> getParametersFromRequestData() {
+        Map<String, String> parameters1 = new HashMap<>();
+        if ((this.data == null) || (!this.data.contains("\\r\\n\\r\\n")) || ((!this.data.contains("?")) && (!this.data.contains("&")))) {
+            return parameters1;
+        }
+        String parameterString = this.data.substring(this.data.toLowerCase().indexOf(this.method.toString().toLowerCase()) + this.method.toString().length() + 2, this.data.toLowerCase().indexOf(this.url.getProtocol().name().toLowerCase()) - 1);
+        String key;
+        String value;
+        String cutString = parameterString;
+        while (cutString.contains("=")) {
+            key = cutString.substring(1, cutString.indexOf("="));
+
+            value = "";
+            if ((cutString.contains("&")) && (cutString.indexOf("&") > 0)) {
+                value = cutString.substring(cutString.indexOf("=") + 1, cutString.indexOf("&"));
+            } else if (cutString.indexOf("&") <= 0) {
+                value = cutString.substring(cutString.indexOf("=") + 1, cutString.length());
+            }
+            parameters1.put(key, value);
+            cutString = cutString.substring(cutString.indexOf(value) + value.length(), cutString.length());
+        }
+        return parameters1;
+    }
+
+    public static final synchronized String parametersToQueryString(final Map<String, String> parameters) {
+        String queryString = "";
+        for (Map.Entry<String, String> parameter : parameters.entrySet()) {
+            if (queryString.isEmpty()) {
+                queryString += "?";
+            } else {
+                queryString += "&";
+            }
+            queryString += parameter.getKey() + "=" + parameter.getValue();
+        }
+        return queryString;
+    }
+
     @Override
     public String toString() {
-        return "Request{" + "asynchronousSocketChannel=" + asynchronousSocketChannel + ", byteBuffer=" + byteBuffer + ", data=" + data + ", headers=" + headers + ", url=" + url + ", parameters=" + parameters + ", method=" + method + '}';
+        return "Request{" + "asynchronousSocketChannel=" + asynchronousSocketChannel + ", byteBuffer=" + byteBuffer + ", data=" + data + ", method=" + method + ", headers=" + headers + ", port=" + port + ", parameters=" + parameters + ", url=" + url + '}';
     }
 
 }

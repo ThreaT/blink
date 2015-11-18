@@ -5,12 +5,12 @@ import cool.blink.back.core.Request;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Blink;
 import cool.blink.back.core.Response;
+import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Url;
 import cool.blink.back.search.Query;
 import cool.blink.back.search.Result;
 import cool.blink.back.search.Score;
 import cool.blink.back.utilities.Longs;
-import cool.blink.back.utilities.Urls;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.Onclick;
@@ -47,18 +47,14 @@ public class Search extends Scenario {
     @Override
     public Boolean fit(Request request) {
         Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running fit: {0}", this.toString());
-        return Urls.hasMatchingAbsoluteUrls(request.getUrl(), this.getUrls());
+        return Url.hasMatchingAbsoluteUrls(request.getUrl(), this.getUrls());
     }
 
     @Override
     public void main(Request request) {
         Logger.getLogger(Search.class.getName()).log(Level.INFO, "Running main: {0}", this.toString());
-        try {
-            Response response = new SearchTemplate(new Query(Longs.generateUniqueId(), request.getParameters().get("query")));
-            Application.getWebServer().send(request, response);
-        } catch (IOException | InterruptedException ex) {
-            Logger.getLogger(Search.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        Response response = new SearchTemplate(new Query(Longs.generateUniqueId(), request.getParameters().get("query"))).getResponse();
+        Application.getWebServer().respond(request, response);
     }
 
     /**
@@ -86,8 +82,9 @@ public class Search extends Scenario {
         return report;
     }
 
-    public static final class SearchTemplate extends Response {
+    public static final class SearchTemplate {
 
+        private Response response;
         private final Document document;
         private final Score score;
         private final Query query;
@@ -101,8 +98,7 @@ public class Search extends Scenario {
             this.bestResults = null;
             this.resultsBox = (Div) new Div().append(new Style(new Width(270, WidthValue.pixels)));
             this.document = new Document().append(this.resultsBox);
-            super.setCode(200);
-            super.setPayload(this.document.print());
+            this.response = new Response(Status.$200, this.document.print());
         }
 
         public SearchTemplate(final Query query) {
@@ -124,8 +120,15 @@ public class Search extends Scenario {
                 tempResultsBox = (Div) tempResultsBox.append(new Div().append(new Onclick("location.href=" + url)).append(new Style(new Width(100, WidthValue.percent), new BackgroundColor(ColorNameValue.White), new Cursor(CursorValue.pointer), new Height(50, HeightValue.pixels), new FontSize(14, FontSizeValue.pixels), new Border(1, BorderWidthValue.pixels, ColorNameValue.LightGray, BorderStyleValue.solid))).append(new Text(result.getTitle() + " - " + result.getDescription())));
             }
             this.resultsBox = tempResultsBox;
-            super.setCode(200);
-            super.setPayload(searchTemplate.getDocument().replaceAll(searchTemplate.getResultsBox(), this.resultsBox).print());
+            this.response = new Response(Status.$200, searchTemplate.getDocument().replaceAll(searchTemplate.getResultsBox(), this.resultsBox).print());
+        }
+
+        public Response getResponse() {
+            return response;
+        }
+
+        public void setResponse(Response response) {
+            this.response = response;
         }
 
         public final Document getDocument() {

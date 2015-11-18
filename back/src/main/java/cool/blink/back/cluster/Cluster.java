@@ -6,13 +6,13 @@ import cool.blink.back.core.Fail;
 import cool.blink.back.core.Http;
 import cool.blink.back.core.Request;
 import cool.blink.back.core.Response;
+import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
 import cool.blink.back.exception.DuplicateNodeIdException;
 import cool.blink.back.session.Session;
 import cool.blink.back.utilities.HttpRequests;
 import cool.blink.back.utilities.Sets;
-import cool.blink.back.utilities.Urls;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -133,15 +133,17 @@ public class Cluster {
                             //2. If request contains up to date etag for a supported scenario then send a 304
                             Etag requestEtag = Etag.getEtag(request);
                             if ((requestEtag != null) && (Etag.isScenarioSupported(requestEtag))) {
-                                Blink.getWebServer().send(request, new Response(304, ""));
+                                Blink.getWebServer().respond(request, new Response(Status.$304, ""));
                                 continue;
                             }
+
                             //3. Find the best node to execute the request
                             Node bestNode = findBestNode(request);
                             if ((bestNode != null) && (!bestNode.equals(Blink.getNode()))) {
                                 sendProxyHttpRequest(bestNode, request);
                                 continue;
                             }
+
                             //4. If this node is the best node then find out which scenario should execute the request and execute it
                             if ((bestNode == null) || (bestNode.equals(Blink.getNode()))) {
                                 Scenario execute = find(request);
@@ -150,22 +152,19 @@ public class Cluster {
                                     continue;
                                 }
                             }
+
                             //5. If no node supports the request then send a redirect to the fail scenario
-                            request.getHttpExchange().getResponseHeaders().add("Location", "/fail");
-                            Blink.getWebServer().send(request, new Response(302, ""));
+                            Response response = new Response(Status.$304, "");
+                            response.getHeaders().put(Response.HeaderFieldName.Location, "/fail");
+                            Blink.getWebServer().respond(request, response);
                         } catch (NullPointerException | IllegalAccessException | InstantiationException | InvocationTargetException | CloneNotSupportedException | IllegalArgumentException | NoSuchMethodException | SecurityException | IOException | InterruptedException ex) {
                             ///TODO replace (request.toString() != null ? request.toString() : "request was null") with null
                             Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, (request.toString() != null ? request.toString() : "request was null"), ex);
                         }
                     } else {
-                        try {
-                            if (request != null) {
-                                request.getHttpExchange().getResponseHeaders().add("Location", "/fail");
-                            }
-                            Blink.getWebServer().send(request, new Response(302, ""));
-                        } catch (IOException | InterruptedException ex) {
-                            Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
-                        }
+                        Response response = new Response(Status.$304, "");
+                        response.getHeaders().put(Response.HeaderFieldName.Location, "/fail");
+                        Blink.getWebServer().respond(request, response);
                     }
                 }
             }
@@ -178,7 +177,7 @@ public class Cluster {
             //1. Check if found nodes (it should find itself as well) supports a url to fulfill the request
             for (Node node_ : suspects) {
                 for (Url url : node_.getSupportedUrls()) {
-                    if (Urls.hasMatchingAbsoluteUrls(url, request.getUrl())) {
+                    if (Url.hasMatchingAbsoluteUrls(url, request.getUrl())) {
                         candidates.add(node_);
                     }
                 }
@@ -264,7 +263,7 @@ public class Cluster {
          */
         public void run(Scenario scenario, Request request) throws IllegalAccessException, InstantiationException, InvocationTargetException, IOException, IllegalArgumentException, NoSuchMethodException, SecurityException {
             Boolean testMode = false;
-            if (request.getHttpExchange().getAttribute("testMode") != null) {
+            if (request.getParameters().get("testMode") != null) {
                 testMode = true;
             }
             if (testMode) {
@@ -274,6 +273,13 @@ public class Cluster {
             }
         }
 
+        /**
+         * Use http client tools to forward the request somewhere else and then
+         * pass on the reply to the request
+         *
+         * @param bestNode best node to be used to handle the request
+         * @param request request
+         */
         public final synchronized void sendProxyHttpRequest(final Node bestNode, final Request request) {
             String redirectUrl = "";
             for (Url url : bestNode.getSupportedUrls()) {
@@ -289,14 +295,10 @@ public class Cluster {
                 } else {
                     response = HttpRequests.sendGet(redirectUrl, Blink.getCluster().getTimeoutInMillis());
                 }
-                Blink.getWebServer().send(request, response);
-            } catch (IOException | InterruptedException ex) {
-                response = new Response(404, "404 Not Found");
-                try {
-                    Blink.getWebServer().send(request, response);
-                } catch (IOException | InterruptedException ex1) {
-                    Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex1);
-                }
+                Blink.getWebServer().respond(request, response);
+            } catch (IOException ex) {
+                response = new Response(Status.$404, "404 Not Found");
+                Blink.getWebServer().respond(request, response);
                 Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
             }
         }

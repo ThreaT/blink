@@ -1,6 +1,7 @@
 package cool.blink.back.utilities;
 
 import cool.blink.back.core.Response;
+import cool.blink.back.core.Response.Status;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -25,12 +26,12 @@ public class HttpRequests {
             } catch (IOException ex) {
 
             }
-            response = new Response(responseCode, stringBuilder.toString());
+            response = new Response(Response.getStatusFromInteger(responseCode), stringBuilder.toString());
         } catch (IOException ex) {
 
         }
         if (response == null) {
-            response = new Response(404, "");
+            response = new Response(Status.$404, "");
         }
         return response;
     }
@@ -52,7 +53,7 @@ public class HttpRequests {
             } catch (IOException ex) {
 
             }
-            response = new Response(responseCode, stringBuilder.toString());
+            response = new Response(Response.getStatusFromInteger(responseCode), stringBuilder.toString());
         } catch (IOException ex) {
 
         } catch (java.lang.IllegalArgumentException ex) {
@@ -61,7 +62,7 @@ public class HttpRequests {
 
         }
         if (response == null) {
-            response = new Response(404, "");
+            response = new Response(Status.$404, "");
         }
         return response;
     }
@@ -79,7 +80,7 @@ public class HttpRequests {
                 response.append(inputLine);
             }
         }
-        return new Response(responseCode, response.toString());
+        return new Response(Response.getStatusFromInteger(responseCode), response.toString());
 
     }
 
@@ -97,7 +98,7 @@ public class HttpRequests {
                 response.append(inputLine);
             }
         }
-        return new Response(responseCode, response.toString());
+        return new Response(Response.getStatusFromInteger(responseCode), response.toString());
 
     }
 }
