@@ -6,7 +6,7 @@ import cool.blink.back.core.Response;
 import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
-import cool.blink.back.utilities.Logs.CustomLevel;
+import cool.blink.back.utilities.Logs.Priority;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.Placeholder;
@@ -52,13 +52,13 @@ public class ScenarioCreator extends Scenario {
 
     @Override
     public Boolean fit(Request request) {
-        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running fit: {0}", this.toString());
+        Logger.getLogger(Home.class.getName()).log(Priority.LOWEST, "Running fit: {0}", this.toString());
         return Url.hasMatchingAbsoluteUrls(request.getUrl(), this.getUrls());
     }
 
     @Override
     public void main(Request request) {
-        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running main: {0}", this.toString());
+        Logger.getLogger(Home.class.getName()).log(Priority.LOWEST, "Running main: {0}", this.toString());
         Application.getWebServer().respond(request, scenarioCreatorTemplate.getResponse());
     }
 
@@ -75,7 +75,7 @@ public class ScenarioCreator extends Scenario {
      */
     @Override
     public Report test(Request request) {
-        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running test: {0}", this.toString());
+        Logger.getLogger(Home.class.getName()).log(Priority.LOWEST, "Running test: {0}", this.toString());
         Report report = new Report(1, 1, "100%", "");
         Long start = System.currentTimeMillis();
         main(request);
@@ -130,7 +130,7 @@ public class ScenarioCreator extends Scenario {
         private final Button generate;
 
         protected ScenarioCreatorTemplate() {
-            Logger.getLogger(ScenarioCreatorTemplate.class.getName()).log(CustomLevel.MEDIUM, "Preparing ScenarioCreatorTemplate...");
+            Logger.getLogger(ScenarioCreatorTemplate.class.getName()).log(Priority.MEDIUM, "Preparing ScenarioCreatorTemplate...");
             this.html = new Html();
             this.head = new Head();
             this.title = (Title) new Title().append(new Text("blink Scenario Creator"));

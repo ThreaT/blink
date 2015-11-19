@@ -10,7 +10,7 @@ import cool.blink.back.core.Url;
 import cool.blink.back.search.Query;
 import cool.blink.back.search.Result;
 import cool.blink.back.search.Score;
-import cool.blink.back.utilities.Logs.CustomLevel;
+import cool.blink.back.utilities.Logs.Priority;
 import cool.blink.back.utilities.Longs;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
@@ -45,13 +45,13 @@ public class Search extends Scenario {
 
     @Override
     public Boolean fit(Request request) {
-        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running fit: {0}", this.toString());
+        Logger.getLogger(Home.class.getName()).log(Priority.LOWEST, "Running fit: {0}", this.toString());
         return Url.hasMatchingAbsoluteUrls(request.getUrl(), this.getUrls());
     }
 
     @Override
     public void main(Request request) {
-        Logger.getLogger(Search.class.getName()).log(CustomLevel.LOWEST, "Running main: {0}", this.toString());
+        Logger.getLogger(Search.class.getName()).log(Priority.LOWEST, "Running main: {0}", this.toString());
         Response response = new SearchTemplate(new Query(Longs.generateUniqueId(), request.getParameters().get("query"))).getResponse();
         Application.getWebServer().respond(request, response);
     }
@@ -69,7 +69,7 @@ public class Search extends Scenario {
      */
     @Override
     public Report test(Request request) {
-        Logger.getLogger(Search.class.getName()).log(CustomLevel.LOWEST, "Running test: {0}", this.toString());
+        Logger.getLogger(Search.class.getName()).log(Priority.LOWEST, "Running test: {0}", this.toString());
         Report report = new Report(1, 1, "100%", "");
         Long start = System.currentTimeMillis();
         main(request);
@@ -91,7 +91,7 @@ public class Search extends Scenario {
         private final Div resultsBox;
 
         protected SearchTemplate() {
-            Logger.getLogger(SearchTemplate.class.getName()).log(CustomLevel.MEDIUM, "Preparing SearchTemplate...");
+            Logger.getLogger(SearchTemplate.class.getName()).log(Priority.MEDIUM, "Preparing SearchTemplate...");
             this.score = new Score();
             this.query = null;
             this.bestResults = null;

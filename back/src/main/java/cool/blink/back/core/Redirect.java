@@ -1,7 +1,7 @@
 package cool.blink.back.core;
 
 import cool.blink.back.core.Response.Status;
-import cool.blink.back.utilities.Logs.CustomLevel;
+import cool.blink.back.utilities.Logs.Priority;
 import java.util.logging.Logger;
 
 /**
@@ -20,13 +20,13 @@ public class Redirect extends Scenario {
     
     @Override
     public Boolean fit(Request request) {
-        Logger.getLogger(Redirect.class.getName()).log(CustomLevel.LOWEST, "Running fit: {0}", this.toString());
+        Logger.getLogger(Redirect.class.getName()).log(Priority.LOWEST, "Running fit: {0}", this.toString());
         return Url.hasMatchingAbsoluteUrls(this.from, request.getUrl());
     }
     
     @Override
     public void main(Request request) {
-        Logger.getLogger(Redirect.class.getName()).log(CustomLevel.LOWEST, "Running main: {0}", this.toString());
+        Logger.getLogger(Redirect.class.getName()).log(Priority.LOWEST, "Running main: {0}", this.toString());
         Response response = new Response(Status.$302, "");
         response.getHeaders().put(Response.HeaderFieldName.Location, this.to.getAbsoluteUrl() + (request.getUrl().getQuery() == null ? "" : Url.mergeQueryStrings(this.to, request.getUrl())));
         Blink.getWebServer().respond(request, response);
@@ -45,7 +45,7 @@ public class Redirect extends Scenario {
      */
     @Override
     public Report test(Request request) {
-        Logger.getLogger(Redirect.class.getName()).log(CustomLevel.LOWEST, "Running test: {0}", this.toString());
+        Logger.getLogger(Redirect.class.getName()).log(Priority.LOWEST, "Running test: {0}", this.toString());
         Report report = new Report(1, 1, "100%", "");
         Long start = System.currentTimeMillis();
         main(request);

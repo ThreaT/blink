@@ -14,19 +14,19 @@ public class Logs {
             handler.setLevel(level);
             Logger.getLogger("").addHandler(handler);
         } catch (IOException | SecurityException ex) {
-            Logger.getLogger(Logs.class.getName()).log(CustomLevel.HIGHEST, null, ex);
+            Logger.getLogger(Logs.class.getName()).log(Priority.HIGHEST, null, ex);
         }
     }
 
-    public static class CustomLevel extends Level {
+    public static class Priority extends Level {
 
-        public static final Level LOWEST = new CustomLevel("LOWEST", 1100);
-        public static final Level LOW = new CustomLevel("LOW", 1200);
-        public static final Level MEDIUM = new CustomLevel("MEDIUM", 1300);
-        public static final Level HIGH = new CustomLevel("HIGH", 1400);
-        public static final Level HIGHEST = new CustomLevel("HIGHEST", 1500);
+        public static final Level LOWEST = new Priority("LOWEST", 1100);
+        public static final Level LOW = new Priority("LOW", 1200);
+        public static final Level MEDIUM = new Priority("MEDIUM", 1300);
+        public static final Level HIGH = new Priority("HIGH", 1400);
+        public static final Level HIGHEST = new Priority("HIGHEST", 1500);
 
-        public CustomLevel(String name, int value) {
+        public Priority(String name, int value) {
             super(name, value);
         }
     }

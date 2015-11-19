@@ -10,7 +10,7 @@ import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
 import cool.blink.back.database.Database;
 import cool.blink.back.exception.InvalidPortsException;
-import cool.blink.back.utilities.Logs.CustomLevel;
+import cool.blink.back.utilities.Logs.Priority;
 import cool.blink.back.utilities.Longs;
 import cool.blink.back.webserver.WebServer;
 import cool.blink.examples.helloworld.scenario.home.read.Home;
@@ -44,7 +44,7 @@ public class Application extends Blink {
             );
             application.start();
         } catch (IOException | ClassNotFoundException | InvalidPortsException ex) {
-            Logger.getLogger(Application.class.getName()).log(CustomLevel.HIGHEST, null, ex);
+            Logger.getLogger(Application.class.getName()).log(Priority.HIGHEST, null, ex);
         }
     }
 

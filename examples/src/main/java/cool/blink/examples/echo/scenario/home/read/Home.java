@@ -7,7 +7,7 @@ import cool.blink.back.core.Response;
 import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
-import cool.blink.back.utilities.Logs.CustomLevel;
+import cool.blink.back.utilities.Logs.Priority;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.ButtonType;
@@ -53,13 +53,13 @@ public class Home extends Scenario {
 
     @Override
     public Boolean fit(Request request) {
-        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running...");
+        Logger.getLogger(Home.class.getName()).log(Priority.LOWEST, "Running...");
         return true;
     }
 
     @Override
     public void main(Request request) {
-        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running...");
+        Logger.getLogger(Home.class.getName()).log(Priority.LOWEST, "Running...");
         Blink.getWebServer().respond(request, homeTemplate.getResponse());
     }
 
@@ -76,7 +76,7 @@ public class Home extends Scenario {
      */
     @Override
     public Report test(Request request) {
-        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Starting");
+        Logger.getLogger(Home.class.getName()).log(Priority.LOWEST, "Starting");
         Report report = new Report(1, 1, "100%", "");
         Long start = System.currentTimeMillis();
         main(request);
@@ -86,7 +86,7 @@ public class Home extends Scenario {
             report.appendLog(new String[][]{{"" + Thread.currentThread().getStackTrace()[1].getLineNumber(), "Processing took too long, it took " + (end - start) + " ms."}});
         }
         report.setPercentage(report.calculatePercentage(report.getTotal(), report.getSuccessful()));
-        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Finished");
+        Logger.getLogger(Home.class.getName()).log(Priority.LOWEST, "Finished");
         return report;
     }
 

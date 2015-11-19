@@ -1,7 +1,7 @@
 package cool.blink.back.core;
 
 import cool.blink.back.core.Response.Status;
-import cool.blink.back.utilities.Logs.CustomLevel;
+import cool.blink.back.utilities.Logs.Priority;
 import java.util.logging.Logger;
 
 /**
@@ -23,19 +23,19 @@ public final class Fail extends Scenario {
 
     @Override
     public final Boolean fit(Request request) {
-        Logger.getLogger(Fail.class.getName()).log(CustomLevel.LOWEST, "Running fit: {0}", this.toString());
+        Logger.getLogger(Fail.class.getName()).log(Priority.LOWEST, "Running fit: {0}", this.toString());
         return Url.hasMatchingAbsoluteUrls(request.getUrl(), this.getUrls());
     }
 
     @Override
     public void main(Request request) {
-        Logger.getLogger(Fail.class.getName()).log(CustomLevel.LOWEST, "Running main: {0}", this.toString());
+        Logger.getLogger(Fail.class.getName()).log(Priority.LOWEST, "Running main: {0}", this.toString());
         Blink.getWebServer().respond(request, failTemplate.getResponse());
     }
 
     @Override
     public Report test(Request request) {
-        Logger.getLogger(Fail.class.getName()).log(CustomLevel.LOWEST, "Running test: {0}", this.toString());
+        Logger.getLogger(Fail.class.getName()).log(Priority.LOWEST, "Running test: {0}", this.toString());
         Report report = new Report(0, 0, "100%", "");
         report.setPercentage(report.calculatePercentage(report.getTotal(), report.getSuccessful()));
         return report;
