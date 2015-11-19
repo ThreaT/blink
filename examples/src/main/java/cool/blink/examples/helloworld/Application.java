@@ -37,9 +37,9 @@ public class Application extends Blink {
                     new Database("helloworld_database", "", Foo.class),
                     new Cluster(3000, new Territory("localhost", 1, 65535, 250)),
                     new Node(Longs.generateUniqueId(), "localhost", 8082),
-                    new Redirect(new Url("http://localhost:8081/examples/HelloWorld/"), new Url("http://localhost:8081/examples/HelloWorld/home")),
-                    new ValidFoo(new Url("http://localhost:8081/examples/HelloWorld/foo")),
-                    new InvalidNameFoo(new Url("http://localhost:8081/examples/HelloWorld/foo")),
+                    new Redirect(new Url("http://localhost:8081/examples/HelloWorld/", false), new Url("http://localhost:8081/examples/HelloWorld/home", true)),
+                    new ValidFoo(new Url("http://localhost:8081/examples/HelloWorld/foo", false)),
+                    new InvalidNameFoo(new Url("http://localhost:8081/examples/HelloWorld/foo", false)),
                     new Home(new Url("http://localhost:8081/examples/HelloWorld/home", true))
             );
             application.start();
