@@ -6,6 +6,7 @@ import cool.blink.back.core.Response;
 import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
+import cool.blink.back.utilities.Logs.CustomLevel;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.Action;
@@ -60,20 +61,20 @@ public class HtmlToFront extends Scenario {
 
     @Override
     public Boolean fit(Request request) {
-        Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running fit: {0}", this.toString());
+        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running fit: {0}", this.toString());
         return ((request.getParameters() != null) && (!request.getParameters().isEmpty()));
     }
 
     @Override
     public void main(Request request) {
-        Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running main: {0}", this.toString());
+        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running main: {0}", this.toString());
         try {
             String html = request.getParameters().get("html");
             String front = convertAllElements(html);
             Response response = new HtmlToFrontTemplate(html, front).getResponse();
             Application.getWebServer().respond(request, response);
         } catch (IOException ex) {
-            Logger.getLogger(HtmlToFront.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(HtmlToFront.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
     }
 
@@ -90,7 +91,7 @@ public class HtmlToFront extends Scenario {
      */
     @Override
     public Report test(Request request) {
-        Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running test: {0}", this.toString());
+        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running test: {0}", this.toString());
         Report report = new Report(1, 1, "100%", "");
         Long start = System.currentTimeMillis();
         main(request);
@@ -120,7 +121,7 @@ public class HtmlToFront extends Scenario {
         private final Button copyToClipboard;
 
         protected HtmlToFrontTemplate() {
-            Logger.getLogger(HtmlToFrontTemplate.class.getName()).log(Level.INFO, "Preparing HtmlToFrontTemplate...");
+            Logger.getLogger(HtmlToFrontTemplate.class.getName()).log(CustomLevel.MEDIUM, "Preparing HtmlToFrontTemplate...");
             this.html = new Html();
             this.head = (Head) new Head().append(new StyleElement().append(new Text(new Reset().getReset())));
             this.body = (Body) new Body();

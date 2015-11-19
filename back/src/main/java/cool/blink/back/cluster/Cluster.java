@@ -12,6 +12,7 @@ import cool.blink.back.core.Url;
 import cool.blink.back.exception.DuplicateNodeIdException;
 import cool.blink.back.session.Session;
 import cool.blink.back.utilities.HttpRequests;
+import cool.blink.back.utilities.Logs.CustomLevel;
 import cool.blink.back.utilities.Sets;
 import java.io.EOFException;
 import java.io.IOException;
@@ -159,7 +160,7 @@ public class Cluster {
                             Blink.getWebServer().respond(request, response);
                         } catch (NullPointerException | IllegalAccessException | InstantiationException | InvocationTargetException | CloneNotSupportedException | IllegalArgumentException | NoSuchMethodException | SecurityException | IOException | InterruptedException ex) {
                             ///TODO replace (request.toString() != null ? request.toString() : "request was null") with null
-                            Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, (request.toString() != null ? request.toString() : "request was null"), ex);
+                            Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, (request.toString() != null ? request.toString() : "request was null"), ex);
                         }
                     } else {
                         Response response = new Response(Status.$304, "");
@@ -299,7 +300,7 @@ public class Cluster {
             } catch (IOException ex) {
                 response = new Response(Status.$404, "404 Not Found");
                 Blink.getWebServer().respond(request, response);
-                Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
             }
         }
 
@@ -319,13 +320,13 @@ public class Cluster {
                             try {
                                 process = (Process) objectInputStream.readObject();
                             } catch (IOException | ClassNotFoundException ex) {
-                                Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                                Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
                             }
                             if ((process != null) && (process.getProcessType().equals(ProcessType.Ping))) {
                                 try {
                                     objectOutputStream.writeObject(new Process(null, Blink.getNode(), ProcessType.Pong));
                                 } catch (IOException ex) {
-                                    Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                                    Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
                                 }
                             }
                             if ((process != null) && (process.getProcessType().equals(ProcessType.TotalActionsRequest))) {
@@ -335,7 +336,7 @@ public class Cluster {
                                     Integer totalMissingActions = (Integer) process.getObject() - nodeActions.size();
                                     objectOutputStream.writeObject(new Process(totalMissingActions, Blink.getNode(), ProcessType.TotalActionsResponse));
                                 } catch (IOException ex) {
-                                    Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                                    Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
                                 }
                             }
                             if ((process != null) && (process.getProcessType().equals(ProcessType.MissingActionRecordRequest))) {
@@ -358,12 +359,12 @@ public class Cluster {
                                 }
                             }
                         } catch (SQLException | ClassNotFoundException | IllegalAccessException | InstantiationException ex) {
-                            Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                            Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
                         }
                     }
                 }
             } catch (IOException ex) {
-                Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
             }
         }
 
@@ -379,14 +380,14 @@ public class Cluster {
                 try {
                     Thread.sleep(30000);
                 } catch (InterruptedException ex) {
-                    Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
                 }
                 Long startTime = System.currentTimeMillis();
                 for (Territory territory : Blink.getCluster().getExploredTerritories()) {
                     try {
                         tempNodes = ping(territory);
                     } catch (DuplicateNodeIdException ex) {
-                        Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                        Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
                         System.exit(0);
                     }
                 }
@@ -396,7 +397,7 @@ public class Cluster {
                     tempNodes.clear();
                 }
                 Long endTime = System.currentTimeMillis();
-                Logger.getLogger(Cluster.class.getName()).log(Level.INFO, "Scanned all ports in: {0}", (endTime - startTime) / 1000 + " second(s) and found " + Blink.getCluster().getFoundNodes().size() + " node(s): " + Blink.getCluster().getFoundNodes().toString());
+                Logger.getLogger(Cluster.class.getName()).log(CustomLevel.LOW, "Scanned all ports in: {0}", (endTime - startTime) / 1000 + " second(s) and found " + Blink.getCluster().getFoundNodes().size() + " node(s): " + Blink.getCluster().getFoundNodes().toString());
             }
         }
 
@@ -425,11 +426,11 @@ public class Cluster {
                         tempNodes.add(node);
                     }
                 } catch (ConnectException ex) {
-                    //Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                    //Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
                 } catch (SocketException | SocketTimeoutException | StreamCorruptedException | EOFException ex) {
-                    //Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                    //Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
                 } catch (IOException | ClassNotFoundException ex) {
-                    Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
                 } finally {
                     try {
                         if (objectInputStream != null) {
@@ -442,7 +443,7 @@ public class Cluster {
                             socket.close();
                         }
                     } catch (IOException ex) {
-                        //Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                        //Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
                     }
                 }
             }
@@ -497,11 +498,11 @@ public class Cluster {
                 objectOutputStream.close();
                 socket.close();
             } catch (ConnectException ex) {
-                //Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                //Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
             } catch (SocketException | SocketTimeoutException | StreamCorruptedException | EOFException ex) {
-                //Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                //Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
             } catch (IOException ex) {
-                Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
             } finally {
                 try {
                     if (objectInputStream != null) {
@@ -514,7 +515,7 @@ public class Cluster {
                         socket.close();
                     }
                 } catch (IOException ex) {
-                    //Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                    //Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
                 }
             }
         }
@@ -574,7 +575,7 @@ public class Cluster {
             try {
                 totalActions = Blink.getDatabase().count("action", "nodeName = " + Blink.getNode().getId());
             } catch (ClassNotFoundException | SQLException ex) {
-                Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
             }
             Integer totalMissing = 0;
             Socket socket = null;
@@ -597,11 +598,11 @@ public class Cluster {
                     }
                 }
             } catch (ConnectException ex) {
-                //Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                //Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
             } catch (SocketException | SocketTimeoutException | StreamCorruptedException | EOFException ex) {
-                //Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                //Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
             } catch (IOException | ClassNotFoundException ex) {
-                Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
             } finally {
                 try {
                     if (objectInputStream != null) {
@@ -614,7 +615,7 @@ public class Cluster {
                         socket.close();
                     }
                 } catch (IOException ex) {
-                    //Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                    //Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
                 }
             }
             return totalMissing;
@@ -657,11 +658,11 @@ public class Cluster {
                 objectOutputStream.close();
                 socket.close();
             } catch (ConnectException ex) {
-                //Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                //Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
             } catch (SocketException | SocketTimeoutException | StreamCorruptedException | EOFException ex) {
-                //Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                //Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
             } catch (IOException | ClassNotFoundException | SQLException | IllegalAccessException | InstantiationException ex) {
-                Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
             } finally {
                 try {
                     if (objectInputStream != null) {
@@ -674,7 +675,7 @@ public class Cluster {
                         socket.close();
                     }
                 } catch (IOException ex) {
-                    //Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                    //Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
                 }
             }
             return nextSentAction;
@@ -697,7 +698,7 @@ public class Cluster {
                 try {
                     Thread.sleep(10000);
                 } catch (InterruptedException ex) {
-                    Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
                 }
                 execute();
             }
@@ -730,7 +731,7 @@ public class Cluster {
                         Blink.getDatabase().statement("UPDATE action SET timeOfExecution = " + System.currentTimeMillis() + " WHERE ms = " + action.getMs() + " AND nodeId = " + action.getNodeId());
                     }
                 } catch (SQLException | ClassNotFoundException | IllegalAccessException | InstantiationException ex) {
-                    Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
                 }
             }
         }
@@ -756,7 +757,7 @@ public class Cluster {
                     }
                 }
             } catch (ClassNotFoundException | SQLException | IllegalAccessException | InstantiationException ex) {
-                Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
             }
             return false;
         }
@@ -780,7 +781,7 @@ public class Cluster {
                     Blink.getDatabase().statement("UPDATE action SET timeOfExecution = NULL WHERE ms = " + action.getMs() + " AND nodeId = " + action.getNodeId());
                 }
             } catch (SQLException | ClassNotFoundException | IllegalAccessException | InstantiationException ex) {
-                Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
             }
         }
 
@@ -800,7 +801,7 @@ public class Cluster {
                     Blink.getDatabase().statement("UPDATE action SET timeOfExecution = " + System.currentTimeMillis() + " WHERE ms = " + action.getMs() + " AND nodeId = " + action.getNodeId());
                 }
             } catch (SQLException | ClassNotFoundException | IllegalAccessException | InstantiationException ex) {
-                Logger.getLogger(Cluster.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Cluster.class.getName()).log(CustomLevel.HIGHEST, null, ex);
             }
         }
 

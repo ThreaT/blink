@@ -1,4 +1,4 @@
-package cool.blink.back.utilities;
+package cool.blink.front.utilities;
 
 import java.io.IOException;
 import java.util.logging.FileHandler;

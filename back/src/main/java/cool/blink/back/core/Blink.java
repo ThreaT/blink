@@ -6,6 +6,7 @@ import cool.blink.back.database.Database;
 import cool.blink.back.search.Result;
 import cool.blink.back.session.Session;
 import cool.blink.back.utilities.Logs;
+import cool.blink.back.utilities.Logs.CustomLevel;
 import cool.blink.back.webserver.WebServer;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -14,6 +15,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -91,6 +93,13 @@ public abstract class Blink {
         Logs.setAllLoggersToWriteToFile(applicationName + ".xml", 209715200, level);
     }
 
+    public static final void enableConsoleLogging(final Level level) {
+        Handler[] handlers = Logger.getLogger("").getHandlers();
+        for (Handler handler : handlers) {
+            handler.setLevel(level);
+        }
+    }
+
     public static final void disableAllLogging() {
         java.util.logging.LogManager.getLogManager().reset();
     }
@@ -163,25 +172,25 @@ public abstract class Blink {
     public void start() {
         try {
             Blink.webServer.start();
-            Logger.getLogger(Blink.class.getName()).log(Level.INFO, "WebServer Started.");
+            Logger.getLogger(Blink.class.getName()).log(CustomLevel.MEDIUM, "WebServer Started.");
             Blink.cluster.getHttpRequestHandler().start();
-            Logger.getLogger(Blink.class.getName()).log(Level.INFO, "Http Request Handler Started.");
+            Logger.getLogger(Blink.class.getName()).log(CustomLevel.MEDIUM, "Http Request Handler Started.");
             Blink.cluster.getSocketHandler().start();
-            Logger.getLogger(Blink.class.getName()).log(Level.INFO, "Socket Handler Started.");
+            Logger.getLogger(Blink.class.getName()).log(CustomLevel.MEDIUM, "Socket Handler Started.");
             Blink.cluster.getPortScanner().start();
-            Logger.getLogger(Blink.class.getName()).log(Level.INFO, "Port Scanner Started.");
+            Logger.getLogger(Blink.class.getName()).log(CustomLevel.MEDIUM, "Port Scanner Started.");
             Blink.cluster.getSessionManager().start();
-            Logger.getLogger(Blink.class.getName()).log(Level.INFO, "Session Cleaner Started.");
+            Logger.getLogger(Blink.class.getName()).log(CustomLevel.MEDIUM, "Session Cleaner Started.");
             if (database != null) {
                 database.createPhysicalDatabase();
                 database.createAllPhysicalTables();
                 Blink.cluster.getDatabaseActionSynchronizer().start();
-                Logger.getLogger(Blink.class.getName()).log(Level.INFO, "Database Synchronizer Started.");
+                Logger.getLogger(Blink.class.getName()).log(CustomLevel.MEDIUM, "Database Synchronizer Started.");
                 Blink.cluster.getDatabaseActionExecutor().start();
-                Logger.getLogger(Blink.class.getName()).log(Level.INFO, "Database Action Executor Started.");
+                Logger.getLogger(Blink.class.getName()).log(CustomLevel.MEDIUM, "Database Action Executor Started.");
             }
         } catch (SQLException | ClassNotFoundException | IllegalAccessException | InstantiationException ex) {
-            Logger.getLogger(Blink.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Blink.class.getName()).log(CustomLevel.HIGHEST, null, ex);
             if (webServer != null) {
                 webServer.end();
             }
@@ -195,7 +204,7 @@ public abstract class Blink {
                     }
                 }
             } catch (IOException | SQLException ex2) {
-                Logger.getLogger(Blink.class.getName()).log(Level.SEVERE, null, ex2);
+                Logger.getLogger(Blink.class.getName()).log(CustomLevel.HIGHEST, null, ex2);
             }
         }
     }

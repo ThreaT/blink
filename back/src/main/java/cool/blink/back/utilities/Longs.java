@@ -1,8 +1,8 @@
 package cool.blink.back.utilities;
 
+import cool.blink.back.utilities.Logs.CustomLevel;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Longs {
@@ -17,7 +17,7 @@ public class Longs {
         try {
             Thread.sleep(1);
         } catch (InterruptedException ex) {
-            Logger.getLogger(Longs.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Longs.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
         return System.currentTimeMillis();
     }

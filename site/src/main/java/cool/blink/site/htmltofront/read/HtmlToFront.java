@@ -4,10 +4,9 @@ import cool.blink.back.core.Report;
 import cool.blink.back.core.Request;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
+import cool.blink.back.utilities.Logs.CustomLevel;
 import cool.blink.site.Application;
 import cool.blink.site.home.read.Home;
-import java.io.IOException;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class HtmlToFront extends Scenario {
@@ -18,13 +17,13 @@ public class HtmlToFront extends Scenario {
 
     @Override
     public Boolean fit(Request request) {
-        Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running fit: {0}", this.toString());
+        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running fit: {0}", this.toString());
         return Url.hasMatchingAbsoluteUrls(request.getUrl(), this.getUrls());
     }
 
     @Override
     public void main(Request request) {
-        Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running main: {0}", this.toString());
+        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running main: {0}", this.toString());
         Application.getWebServer().respond(request, cool.blink.site.htmltofront.create.HtmlToFront.htmlToFrontTemplate.getResponse());
     }
 
@@ -41,7 +40,7 @@ public class HtmlToFront extends Scenario {
      */
     @Override
     public Report test(Request request) {
-        Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running test: {0}", this.toString());
+        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running test: {0}", this.toString());
         Report report = new Report(1, 1, "100%", "");
         Long start = System.currentTimeMillis();
         main(request);

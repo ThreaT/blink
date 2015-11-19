@@ -1,6 +1,7 @@
 package cool.blink.front.template.javascript;
 
 import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
+import cool.blink.front.utilities.Logs.CustomLevel;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.GradientPaint;
@@ -14,7 +15,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.Random;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.swing.JPanel;
@@ -45,7 +45,7 @@ public final class Captcha extends JPanel {
         try {
             draw(captchaText, backgroundColorStart, backgroundColorEnd);
         } catch (IOException ex) {
-            Logger.getLogger(Captcha.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Captcha.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
     }
 
@@ -62,7 +62,7 @@ public final class Captcha extends JPanel {
         try {
             draw(captchaText, backgroundColorStart, backgroundColorEnd);
         } catch (IOException ex) {
-            Logger.getLogger(Captcha.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Captcha.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
     }
 

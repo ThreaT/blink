@@ -1,6 +1,7 @@
 package cool.blink.front;
 
 import cool.blink.front.utilities.Files;
+import cool.blink.front.utilities.Logs.CustomLevel;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -35,9 +36,9 @@ public class Autorunner extends Thread {
             String consoleOutput = byteArrayOutputStream.toString();
             File htmlFile = new File(this.htmlFileName);
             Files.write(htmlFile, consoleOutput);
-            Logger.getLogger(Autorunner.class.getName()).log(Level.INFO, "Output written to: {0}", htmlFile.getAbsolutePath());
+            Logger.getLogger(Autorunner.class.getName()).log(CustomLevel.LOWEST, "Output written to: {0}", htmlFile.getAbsolutePath());
         } catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | ClassNotFoundException | InstantiationException | IOException ex) {
-            Logger.getLogger(Autorunner.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Autorunner.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
     }
 

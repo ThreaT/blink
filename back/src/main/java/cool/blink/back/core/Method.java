@@ -1,8 +1,8 @@
 package cool.blink.back.core;
 
+import cool.blink.back.utilities.Logs.CustomLevel;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Method {
@@ -16,7 +16,7 @@ public class Method {
         try {
             method = clazz.getMethod(name, parameterTypes);
         } catch (NoSuchMethodException | SecurityException ex) {
-            Logger.getLogger(Method.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Method.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
     }
 

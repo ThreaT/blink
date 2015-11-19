@@ -10,6 +10,7 @@ import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
 import cool.blink.back.exception.InvalidPortsException;
 import cool.blink.back.search.Result;
+import cool.blink.back.utilities.Logs.CustomLevel;
 import cool.blink.back.utilities.Longs;
 import cool.blink.back.webserver.WebServer;
 import cool.blink.site.home.read.Home;
@@ -17,7 +18,6 @@ import cool.blink.site.search.read.Search;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Application extends Blink {
@@ -30,7 +30,8 @@ public class Application extends Blink {
 
     public static void main(String args[]) {
         try {
-            //Blink.enableFileLogging("blink site 1", Level.SEVERE);
+            //Blink.enableFileLogging("blink site 1", CustomLevel.HIGH);
+            Blink.enableConsoleLogging(CustomLevel.LOW);
             application = new Application(
                     new ArrayList<Result>() {
                         {
@@ -54,7 +55,7 @@ public class Application extends Blink {
             );
             application.start();
         } catch (IOException | ClassNotFoundException | InvalidPortsException ex) {
-            Logger.getLogger(Application.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Application.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
     }
 }

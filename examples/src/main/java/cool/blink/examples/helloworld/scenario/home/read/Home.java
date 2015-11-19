@@ -7,6 +7,7 @@ import cool.blink.examples.helloworld.Application;
 import cool.blink.back.core.Response;
 import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Url;
+import cool.blink.back.utilities.Logs.CustomLevel;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.Action;
@@ -37,7 +38,6 @@ import cool.blink.front.html.property.value.InputTypeValue;
 import cool.blink.front.html.property.value.MarginTopValue;
 import cool.blink.front.html.property.value.MethodValue;
 import cool.blink.front.html.property.value.WidthValue;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Home extends Scenario {
@@ -50,13 +50,13 @@ public class Home extends Scenario {
 
     @Override
     public Boolean fit(Request request) {
-        Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running fit: {0}", this.toString());
+        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running fit: {0}", this.toString());
         return Url.hasMatchingAbsoluteUrls(request.getUrl(), this.getUrls());
     }
 
     @Override
     public void main(Request request) {
-        Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running main: {0}", this.toString());
+        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running main: {0}", this.toString());
         Application.getWebServer().respond(request, homeTemplate.getResponse());
     }
 
@@ -73,7 +73,7 @@ public class Home extends Scenario {
      */
     @Override
     public Report test(Request request) {
-        Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running test: {0}", this.toString());
+        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running test: {0}", this.toString());
         Report report = new Report(1, 1, "100%", "");
         Long start = System.currentTimeMillis();
         main(request);
@@ -106,7 +106,7 @@ public class Home extends Scenario {
         private final Input input4;
 
         protected HomeTemplate() {
-            Logger.getLogger(HomeTemplate.class.getName()).log(Level.INFO, "Preparing HomeTemplate...");
+            Logger.getLogger(HomeTemplate.class.getName()).log(CustomLevel.LOWEST, "Preparing HomeTemplate...");
             this.html = new Html();
             this.head = (Head) new Head();
             this.meta = (Meta) new Meta().append(new HttpEquiv(HttpEquivValue.content_type)).append(new Content("text/html; charset=UTF-8"));

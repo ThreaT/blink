@@ -5,9 +5,9 @@ import cool.blink.front.exception.InfertileElementException;
 import cool.blink.front.utilities.Elements;
 import cool.blink.front.utilities.Elements.TagType;
 import cool.blink.front.utilities.FrontContents;
+import cool.blink.front.utilities.Logs.CustomLevel;
 import java.awt.Point;
 import java.lang.reflect.InvocationTargetException;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public abstract class Element implements FrontContent.Api {
@@ -178,7 +178,7 @@ public abstract class Element implements FrontContent.Api {
             newAttributes = new FrontContent(attribute.getAttribute().getPublished() + this.getAttributes().getPublished());
             newElement = this.getClass().getDeclaredConstructor(FrontContent.class, FrontContent.class).newInstance(newAttributes, this.getContent());
         } catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-            Logger.getLogger(Element.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Element.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
         return newElement;
     }
@@ -190,7 +190,7 @@ public abstract class Element implements FrontContent.Api {
             newAttributes = new FrontContent(this.getAttributes().getPublished() + attribute.getAttribute().getPublished());
             newElement = this.getClass().getDeclaredConstructor(FrontContent.class, FrontContent.class).newInstance(newAttributes, this.getContent());
         } catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-            Logger.getLogger(Element.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Element.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
         return newElement;
     }
@@ -206,7 +206,7 @@ public abstract class Element implements FrontContent.Api {
             FrontContent newContent = new FrontContent(newPublished, newUnpublished);
             currentElement = this.getClass().getDeclaredConstructor(FrontContent.class, FrontContent.class).newInstance(this.getAttributes(), newContent);
         } catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-            Logger.getLogger(Element.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Element.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
         return currentElement;
     }
@@ -222,7 +222,7 @@ public abstract class Element implements FrontContent.Api {
             FrontContent newContent = new FrontContent(newPublished, newUnpublished);
             currentElement = this.getClass().getDeclaredConstructor(FrontContent.class, FrontContent.class).newInstance(this.getAttributes(), newContent);
         } catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-            Logger.getLogger(Element.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Element.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
         return currentElement;
     }
@@ -238,7 +238,7 @@ public abstract class Element implements FrontContent.Api {
             FrontContent newContent = new FrontContent(newPublished, newUnpublished);
             newElement = this.getClass().getDeclaredConstructor(FrontContent.class, FrontContent.class).newInstance(this.getAttributes(), newContent);
         } catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-            Logger.getLogger(Element.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Element.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
         return newElement;
     }
@@ -254,7 +254,7 @@ public abstract class Element implements FrontContent.Api {
             FrontContent newContent = new FrontContent(newPublished, newUnpublished);
             newElement = this.getClass().getDeclaredConstructor(FrontContent.class, FrontContent.class).newInstance(this.getAttributes(), newContent);
         } catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-            Logger.getLogger(Element.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Element.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
         return newElement;
     }
@@ -271,7 +271,7 @@ public abstract class Element implements FrontContent.Api {
             FrontContent newContent = new FrontContent(newUnpublished, newPublished);
             currentElement = this.getClass().getDeclaredConstructor(FrontContent.class, FrontContent.class).newInstance(this.getAttributes(), newContent);
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException ex) {
-            Logger.getLogger(Element.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Element.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
         return currentElement;
     }

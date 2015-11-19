@@ -1,6 +1,7 @@
 package cool.blink.back.database;
 
 import cool.blink.back.cluster.Action;
+import cool.blink.back.utilities.Logs.CustomLevel;
 import cool.blink.back.utilities.Reflections;
 import java.io.File;
 import java.io.IOException;
@@ -236,14 +237,14 @@ public class Database {
      */
     public void createPhysicalDatabase() throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
         if (physicalDatabaseExists(this)) {
-            Logger.getLogger(Database.class.getName()).log(Level.INFO, "Database already exists in {0}/{1}, this database will be used.", new Object[]{this.getDestination(), this.getName()});
+            Logger.getLogger(Database.class.getName()).log(CustomLevel.HIGH, "Database already exists in {0}/{1}, this database will be used.", new Object[]{this.getDestination(), this.getName()});
         } else {
             connection = DriverManager.getConnection("jdbc:derby:" + this.getDestination() + "/" + this.getName() + ";" + "create=true");
             disconnect();
             if (physicalDatabaseExists(this)) {
-                Logger.getLogger(Database.class.getName()).log(Level.INFO, "Database created in {0}/{1}", new Object[]{this.getDestination(), this.getName()});
+                Logger.getLogger(Database.class.getName()).log(CustomLevel.MEDIUM, "Database created in {0}/{1}", new Object[]{this.getDestination(), this.getName()});
             } else {
-                Logger.getLogger(Database.class.getName()).log(Level.INFO, "There was a problem while attempting to create the physical database.");
+                Logger.getLogger(Database.class.getName()).log(CustomLevel.HIGH, "There was a problem while attempting to create the physical database.");
             }
         }
     }
@@ -302,13 +303,13 @@ public class Database {
             List<Column> columns = this.listVirtualColumns(tableClass);
             table.setColumns(columns);
             if (physicalTableExists(table)) {
-                Logger.getLogger(Database.class.getName()).log(Level.INFO, "{0} table already exists.", tableClass.getSimpleName());
+                Logger.getLogger(Database.class.getName()).log(CustomLevel.HIGH, "{0} table already exists.", tableClass.getSimpleName());
             } else {
                 this.createPhysicalTable(table);
                 if (physicalTableExists(table)) {
-                    Logger.getLogger(Database.class.getName()).log(Level.INFO, "{0} table has been created.", tableClass.getSimpleName());
+                    Logger.getLogger(Database.class.getName()).log(CustomLevel.MEDIUM, "{0} table has been created.", tableClass.getSimpleName());
                 } else {
-                    Logger.getLogger(Database.class.getName()).log(Level.INFO, "There was a problem while attempting to create a physical table titled {0}.", tableClass.getSimpleName());
+                    Logger.getLogger(Database.class.getName()).log(CustomLevel.HIGH, "There was a problem while attempting to create a physical table titled {0}.", tableClass.getSimpleName());
                 }
             }
         }

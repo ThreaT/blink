@@ -7,6 +7,7 @@ import cool.blink.examples.helloworld.Application;
 import cool.blink.back.core.Response;
 import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Url;
+import cool.blink.back.utilities.Logs.CustomLevel;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.Content;
@@ -17,7 +18,6 @@ import cool.blink.front.html.element.Html;
 import cool.blink.front.html.element.Meta;
 import cool.blink.front.html.element.Title;
 import cool.blink.front.html.property.value.HttpEquivValue;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class InvalidNameFoo extends Scenario {
@@ -30,7 +30,7 @@ public final class InvalidNameFoo extends Scenario {
 
     @Override
     public final Boolean fit(final Request request) {
-        Logger.getLogger(InvalidNameFoo.class.getName()).log(Level.INFO, "Running fit: {0}", this.toString());
+        Logger.getLogger(InvalidNameFoo.class.getName()).log(CustomLevel.LOWEST, "Running fit: {0}", this.toString());
         Boolean urlsMatch = Url.hasMatchingAbsoluteUrls(request.getUrl(), this.getUrls());
         Boolean hasNoParameters = request.getParameters() == null;
         Boolean hasNullName = (request.getParameters().containsKey("name")) && ((request.getParameters().get("name") == null) || (request.getParameters().get("name").equals("")));
@@ -39,7 +39,7 @@ public final class InvalidNameFoo extends Scenario {
 
     @Override
     public final void main(final Request request) {
-        Logger.getLogger(InvalidNameFoo.class.getName()).log(Level.INFO, "Running main: {0}", this.toString());
+        Logger.getLogger(InvalidNameFoo.class.getName()).log(CustomLevel.LOWEST, "Running main: {0}", this.toString());
         Application.getWebServer().respond(request, invalidNameFooTemplate.getResponse());
     }
 
@@ -54,7 +54,7 @@ public final class InvalidNameFoo extends Scenario {
      */
     @Override
     public final Report test(final Request request) {
-        Logger.getLogger(InvalidNameFoo.class.getName()).log(Level.INFO, "Running test: {0}", this.toString());
+        Logger.getLogger(InvalidNameFoo.class.getName()).log(CustomLevel.LOWEST, "Running test: {0}", this.toString());
         Report report = new Report(1, 1, "100%", "");
         Long start = System.currentTimeMillis();
         main(request);

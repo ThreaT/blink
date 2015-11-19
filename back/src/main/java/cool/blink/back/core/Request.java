@@ -29,11 +29,20 @@ public final class Request {
         this.asynchronousSocketChannel = asynchronousSocketChannel;
         this.byteBuffer = byteBuffer;
         this.data = data;
-        this.method = getMethodFromRequestData();
-        this.headers = getHeadersFromRequestData();
-        this.port = Blink.getWebServer().getHttpPort();
-        this.parameters = getParametersFromRequestData();
-        this.url = new Url(getProtocolFromRequestData() + this.headers.get(HeaderFieldName.Host) + ":" + this.port + getPathFromRequestData() + parametersToQueryString(this.parameters));
+        if (this.data.contains("\\uFFFD")) {
+            this.method = Http.Method.GET;
+            this.headers = new HashMap<>();
+            this.headers.put(HeaderFieldName.Host, "127.0.0.1");
+            this.port = Blink.getWebServer().getHttpPort();
+            this.parameters = new HashMap<>();
+            this.url = new Url(Http.Protocol.HTTP, this.headers.get(HeaderFieldName.Host), this.port, "/fail", "", false);
+        } else {
+            this.method = getMethodFromRequestData();
+            this.headers = getHeadersFromRequestData();
+            this.port = Blink.getWebServer().getHttpPort();
+            this.parameters = getParametersFromRequestData();
+            this.url = new Url(getProtocolFromRequestData(), this.headers.get(HeaderFieldName.Host), this.port, getPathFromRequestData(), parametersToQueryString(this.parameters), false);
+        }
     }
 
     public final AsynchronousSocketChannel getAsynchronousSocketChannel() {
@@ -148,7 +157,7 @@ public final class Request {
                 return httpMethod;
             }
         }
-        throw new CorruptMethodException();
+        throw new CorruptMethodException(this.data);
     }
 
     public final Map<HeaderFieldName, String> getHeadersFromRequestData() throws CorruptHeadersException {
@@ -195,12 +204,13 @@ public final class Request {
         return headers1;
     }
 
-    public final Map<String, String> getParametersFromRequestData() {
+    public final Map<String, String> getParametersFromRequestData() throws CorruptProtocolException {
         Map<String, String> parameters1 = new HashMap<>();
         if ((this.data == null) || (!this.data.contains("\\r\\n\\r\\n")) || ((!this.data.contains("?")) && (!this.data.contains("&")))) {
             return parameters1;
         }
-        String parameterString = this.data.substring(this.data.toLowerCase().indexOf(this.method.toString().toLowerCase()) + this.method.toString().length() + 2, this.data.toLowerCase().indexOf(this.url.getProtocol().name().toLowerCase()) - 1);
+        String firstLine = this.data.substring(0, this.data.indexOf("\\r\\n"));
+        String parameterString = firstLine.substring(firstLine.indexOf("?"), firstLine.indexOf(" ", firstLine.indexOf("?")));
         String key;
         String value;
         String cutString = parameterString;

@@ -6,6 +6,7 @@ import cool.blink.back.core.Response;
 import cool.blink.back.exception.CorruptHeadersException;
 import cool.blink.back.exception.CorruptMethodException;
 import cool.blink.back.exception.CorruptProtocolException;
+import cool.blink.back.utilities.Logs.CustomLevel;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -108,10 +109,12 @@ public class WebServer extends Thread {
                         Request request = new Request(asynchronousSocketChannel, byteBuffer, StringEscapeUtils.escapeJava(Charset.defaultCharset().decode(byteBuffer).toString()));
 
                         //Async Response
-                        Logger.getLogger(WebServer.class.getName()).log(Level.INFO, "New request to {0}", request.getUrl());
+                        Logger.getLogger(WebServer.class.getName()).log(CustomLevel.LOW, "New request to {0}", request.getUrl());
                         Blink.getNode().getRequestQueue().add(request);
-                    } catch (InterruptedException | ExecutionException | TimeoutException | MalformedURLException | CorruptHeadersException | CorruptProtocolException | CorruptMethodException ex) {
-                        Logger.getLogger(WebServer.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch (CorruptHeadersException | CorruptProtocolException | CorruptMethodException | MalformedURLException ex) {
+                        Logger.getLogger(WebServer.class.getName()).log(CustomLevel.HIGH, null, ex);
+                    } catch (InterruptedException | ExecutionException | TimeoutException ex) {
+                        Logger.getLogger(WebServer.class.getName()).log(CustomLevel.HIGHEST, null, ex);
                     }
                 }
 
@@ -134,7 +137,7 @@ public class WebServer extends Thread {
         try {
             this.asynchronousServerSocketChannel.close();
         } catch (IOException ex) {
-            Logger.getLogger(WebServer.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(WebServer.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
         this.interrupt();
     }
@@ -145,7 +148,7 @@ public class WebServer extends Thread {
         try {
             request.getAsynchronousSocketChannel().close();
         } catch (IOException ex) {
-            Logger.getLogger(WebServer.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(WebServer.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
     }
 

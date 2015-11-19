@@ -7,6 +7,7 @@ import cool.blink.back.core.Response;
 import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
+import cool.blink.back.utilities.Logs.CustomLevel;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.Style;
@@ -18,7 +19,6 @@ import cool.blink.front.html.property.Width;
 import cool.blink.front.html.property.value.HeightValue;
 import cool.blink.front.html.property.value.PaddingValue;
 import cool.blink.front.html.property.value.WidthValue;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Echo extends Scenario {
@@ -31,13 +31,13 @@ public class Echo extends Scenario {
 
     @Override
     public Boolean fit(Request request) {
-        Logger.getLogger(Echo.class.getName()).log(Level.INFO, "Running...");
+        Logger.getLogger(Echo.class.getName()).log(CustomLevel.LOWEST, "Running...");
         return true;
     }
 
     @Override
     public void main(Request request) {
-        Logger.getLogger(Echo.class.getName()).log(Level.INFO, "Running...");
+        Logger.getLogger(Echo.class.getName()).log(CustomLevel.LOWEST, "Running...");
         Blink.getWebServer().respond(request, echoTemplate.getResponse());
     }
 

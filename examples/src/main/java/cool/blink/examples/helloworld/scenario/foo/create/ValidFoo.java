@@ -8,6 +8,7 @@ import cool.blink.back.utilities.Longs;
 import cool.blink.back.core.Response;
 import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Url;
+import cool.blink.back.utilities.Logs.CustomLevel;
 import cool.blink.examples.helloworld.table.Foo;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
@@ -35,7 +36,7 @@ public class ValidFoo extends Scenario {
 
     @Override
     public Boolean fit(Request request) {
-        Logger.getLogger(ValidFoo.class.getName()).log(Level.INFO, "Running ValidFoo: fit(HttpExchange httpExchange)");
+        Logger.getLogger(ValidFoo.class.getName()).log(CustomLevel.LOWEST, "Running ValidFoo: fit(HttpExchange httpExchange)");
         if ((!request.getParameters().containsKey("name")) || (!request.getParameters().containsKey("action")) || (!request.getParameters().containsKey("method"))) {
             return false;
         } else {
@@ -49,13 +50,13 @@ public class ValidFoo extends Scenario {
     @Override
     public void main(Request request) {
         try {
-            Logger.getLogger(ValidFoo.class.getName()).log(Level.INFO, "Running ValidFoo: main(HttpExchange httpExchange)");
+            Logger.getLogger(ValidFoo.class.getName()).log(CustomLevel.LOWEST, "Running ValidFoo: main(HttpExchange httpExchange)");
             Foo foo = new Foo(Longs.generateUniqueId(), Foo.class.getSimpleName().toLowerCase());
             foo.setName(request.getParameters().get("name"));
             Blink.getDatabase().createPhysicalRecord(Blink.getDatabase().populateRecordDatabaseAndTableAndCells(foo));
             Blink.getWebServer().respond(request, new ValidFooTemplate(foo).getResponse());
         } catch (SQLException | ClassNotFoundException | IllegalAccessException | IllegalArgumentException | InstantiationException ex) {
-            Logger.getLogger(ValidFoo.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(ValidFoo.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
     }
 
@@ -72,7 +73,7 @@ public class ValidFoo extends Scenario {
      */
     @Override
     public Report test(Request request) {
-        Logger.getLogger(ValidFoo.class.getName()).log(Level.INFO, "Running ValidFoo: test(HttpExchange httpExchange)");
+        Logger.getLogger(ValidFoo.class.getName()).log(CustomLevel.LOWEST, "Running ValidFoo: test(HttpExchange httpExchange)");
         Report report = new Report(2, 2, "100%", "");
         Long start = System.currentTimeMillis();
         main(request);

@@ -9,13 +9,13 @@ import cool.blink.back.core.Redirect;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
 import cool.blink.back.exception.InvalidPortsException;
+import cool.blink.back.utilities.Logs.CustomLevel;
 import cool.blink.back.utilities.Longs;
 import cool.blink.back.webserver.WebServer;
 import cool.blink.examples.echo.scenario.home.read.Home;
 import cool.blink.examples.echo.scenario.echo.read.Echo;
 import java.io.File;
 import java.io.IOException;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -41,7 +41,7 @@ public class Application extends Blink {
                     new Echo(new Url("http://localhost:80/examples/echo/echo"))
             );
         } catch (IOException | ClassNotFoundException | InvalidPortsException ex) {
-            Logger.getLogger(Application.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Application.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         }
         application.start();
     }

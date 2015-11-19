@@ -6,6 +6,7 @@ import cool.blink.back.core.Response;
 import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
+import cool.blink.back.utilities.Logs.CustomLevel;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.Action;
@@ -31,7 +32,6 @@ import cool.blink.front.template.html.Reset;
 import cool.blink.site.home.read.Home;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ScenarioCreator extends Scenario {
@@ -55,13 +55,13 @@ public class ScenarioCreator extends Scenario {
 
     @Override
     public Boolean fit(Request request) {
-        Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running fit: {0}", this.toString());
+        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running fit: {0}", this.toString());
         return ((request.getParameters() != null) && (!request.getParameters().isEmpty()));
     }
 
     @Override
     public void main(Request request) {
-        Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running main: {0}", this.toString());
+        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running main: {0}", this.toString());
         //try {
         populateFitConditions();
         System.out.println("fit conditions: " + fitConditions.toString());
@@ -115,7 +115,7 @@ public class ScenarioCreator extends Scenario {
         //jTextArea1.setText(this.file);
         //Application.getWebServer().send(httpExchange, request, template.getResponse());
         //} catch (IOException | InterruptedException | CloneNotSupportedException ex) {
-        //Logger.getLogger(ScenarioCreator.class.getName()).log(Level.SEVERE, null, ex);
+        //Logger.getLogger(ScenarioCreator.class.getName()).log(CustomLevel.HIGHEST, null, ex);
         //}
     }
 
@@ -132,7 +132,7 @@ public class ScenarioCreator extends Scenario {
      */
     @Override
     public Report test(Request request) {
-        Logger.getLogger(Home.class.getName()).log(Level.INFO, "Running test: {0}", this.toString());
+        Logger.getLogger(Home.class.getName()).log(CustomLevel.LOWEST, "Running test: {0}", this.toString());
         Report report = new Report(1, 1, "100%", "");
         Long start = System.currentTimeMillis();
         main(request);
@@ -163,7 +163,7 @@ public class ScenarioCreator extends Scenario {
         private final Button copyToClipboard;
 
         protected ScenarioCreatorTemplate() {
-            Logger.getLogger(ScenarioCreatorTemplate.class.getName()).log(Level.INFO, "Preparing ScenarioCreatorTemplate...");
+            Logger.getLogger(ScenarioCreatorTemplate.class.getName()).log(CustomLevel.MEDIUM, "Preparing ScenarioCreatorTemplate...");
             this.html = new Html();
             this.head = (Head) new Head();
             this.reset = new StyleElement(new Text(new Reset().getReset()).getText());
