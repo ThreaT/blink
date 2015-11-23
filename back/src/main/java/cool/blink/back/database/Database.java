@@ -26,7 +26,7 @@ import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
-public class Database {
+public final class Database {
 
     private String name;
     private String destination;
@@ -44,6 +44,13 @@ public class Database {
 
         //Add action table
         this.tables.add(Action.class);
+
+        try {
+            createPhysicalDatabase();
+            createAllPhysicalTables();
+        } catch (SQLException | ClassNotFoundException | IllegalAccessException | InstantiationException ex) {
+            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public Database(String name, String destination, Class... tables) {
@@ -54,6 +61,13 @@ public class Database {
 
         //Add action table
         this.tables.add(Action.class);
+
+        try {
+            createPhysicalDatabase();
+            createAllPhysicalTables();
+        } catch (SQLException | ClassNotFoundException | IllegalAccessException | InstantiationException ex) {
+            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public String getName() {
@@ -1096,6 +1110,11 @@ public class Database {
             return "Parameter{" + "placeholderIndex=" + placeholderIndex + ", value=" + value + ", type=" + type + '}';
         }
 
+    }
+
+    @Override
+    public String toString() {
+        return "Database{" + "name=" + name + ", destination=" + destination + ", tables=" + tables + ", connection=" + connection + '}';
     }
 
 }

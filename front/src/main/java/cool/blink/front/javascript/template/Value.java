@@ -1,4 +1,4 @@
-package cool.blink.front.template.javascript;
+package cool.blink.front.javascript.template;
 
 public class Value {
 

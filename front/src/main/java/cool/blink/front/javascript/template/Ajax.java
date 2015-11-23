@@ -1,4 +1,4 @@
-package cool.blink.front.template.javascript;
+package cool.blink.front.javascript.template;
 
 import cool.blink.front.html.property.value.MethodValue;
 import cool.blink.front.utilities.Maps;

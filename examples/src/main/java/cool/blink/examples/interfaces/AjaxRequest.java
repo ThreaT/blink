@@ -17,7 +17,7 @@ import cool.blink.front.html.element.Script;
 import cool.blink.front.html.property.value.ButtonTypeValue;
 import cool.blink.front.html.property.value.DoctypeValue;
 import cool.blink.front.html.property.value.MethodValue;
-import cool.blink.front.template.javascript.Ajax;
+import cool.blink.front.javascript.template.Ajax;
 
 /**
  * Please disable CORS on your browser before attempting to run this example

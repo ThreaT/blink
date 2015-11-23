@@ -17,7 +17,7 @@ import cool.blink.front.html.property.value.ColorNameValue;
 import cool.blink.front.html.property.value.DoctypeValue;
 import cool.blink.front.html.property.value.HeightValue;
 import cool.blink.front.html.property.value.WidthValue;
-import cool.blink.front.template.html.Reset;
+import cool.blink.front.css.template.Reset;
 
 public class ResponsiveHeader {
 

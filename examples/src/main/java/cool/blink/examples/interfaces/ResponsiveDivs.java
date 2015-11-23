@@ -26,7 +26,7 @@ import cool.blink.front.html.property.value.MarginLeftValue;
 import cool.blink.front.html.property.value.MarginRightValue;
 import cool.blink.front.html.property.value.MaxWidthValue;
 import cool.blink.front.html.property.value.WidthValue;
-import cool.blink.front.template.html.Reset;
+import cool.blink.front.css.template.Reset;
 
 public class ResponsiveDivs {
 

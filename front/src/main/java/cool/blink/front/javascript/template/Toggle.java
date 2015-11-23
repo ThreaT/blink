@@ -1,6 +1,4 @@
-package cool.blink.front.template.javascript;
-
-import cool.blink.front.template.value.ToggleValue;
+package cool.blink.front.javascript.template;
 
 public final class Toggle {
 

@@ -38,9 +38,9 @@ import cool.blink.front.html.property.value.HttpEquivValue;
 import cool.blink.front.html.property.value.InputTypeValue;
 import cool.blink.front.html.property.value.MarginTopValue;
 import cool.blink.front.html.property.value.WidthValue;
-import cool.blink.front.template.javascript.InnerHtml;
-import cool.blink.front.template.javascript.Value;
-import cool.blink.front.template.javascript.WebSocket;
+import cool.blink.front.javascript.template.InnerHtml;
+import cool.blink.front.javascript.template.Value;
+import cool.blink.front.javascript.template.WebSocket;
 import java.util.logging.Logger;
 
 public class Home extends Scenario {

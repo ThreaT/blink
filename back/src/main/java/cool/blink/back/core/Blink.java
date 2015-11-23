@@ -8,8 +8,6 @@ import cool.blink.back.session.Session;
 import cool.blink.back.utilities.Logs;
 import cool.blink.back.utilities.Logs.Priority;
 import cool.blink.back.webserver.WebServer;
-import java.io.IOException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -170,42 +168,21 @@ public abstract class Blink {
     }
 
     public void start() {
-        try {
-            Blink.webServer.start();
-            Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "WebServer Started.");
-            Blink.cluster.getHttpRequestHandler().start();
-            Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "Http Request Handler Started.");
-            Blink.cluster.getSocketHandler().start();
-            Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "Socket Handler Started.");
-            Blink.cluster.getPortScanner().start();
-            Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "Port Scanner Started.");
-            Blink.cluster.getSessionManager().start();
-            Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "Session Cleaner Started.");
-            if (database != null) {
-                database.createPhysicalDatabase();
-                database.createAllPhysicalTables();
-                Blink.cluster.getDatabaseActionSynchronizer().start();
-                Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "Database Synchronizer Started.");
-                Blink.cluster.getDatabaseActionExecutor().start();
-                Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "Database Action Executor Started.");
-            }
-        } catch (SQLException | ClassNotFoundException | IllegalAccessException | InstantiationException ex) {
-            Logger.getLogger(Blink.class.getName()).log(Priority.HIGHEST, null, ex);
-            if (webServer != null) {
-                webServer.end();
-            }
-            try {
-                if (database != null) {
-                    database.deletePhysicalDatabase(database.getDestination() + "/" + database.getName());
-                    if (database.physicalDatabaseExists(database)) {
-                        System.out.println("Problem while attempting to delete database");
-                    } else {
-                        System.out.println("Database deleted");
-                    }
-                }
-            } catch (IOException | SQLException ex2) {
-                Logger.getLogger(Blink.class.getName()).log(Priority.HIGHEST, null, ex2);
-            }
+        Blink.webServer.start();
+        Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "WebServer Started.");
+        Blink.cluster.getHttpRequestHandler().start();
+        Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "Http Request Handler Started.");
+        Blink.cluster.getSocketHandler().start();
+        Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "Socket Handler Started.");
+        Blink.cluster.getPortScanner().start();
+        Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "Port Scanner Started.");
+        Blink.cluster.getSessionManager().start();
+        Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "Session Cleaner Started.");
+        if (database != null) {
+            Blink.cluster.getDatabaseActionSynchronizer().start();
+            Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "Database Synchronizer Started.");
+            Blink.cluster.getDatabaseActionExecutor().start();
+            Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "Database Action Executor Started.");
         }
     }
 }

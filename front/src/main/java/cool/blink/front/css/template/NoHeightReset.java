@@ -1,4 +1,4 @@
-package cool.blink.front.template.html;
+package cool.blink.front.css.template;
 
 import cool.blink.front.html.element.A;
 import cool.blink.front.html.element.Abbr;

@@ -1,4 +1,4 @@
-package cool.blink.front.template.javascript;
+package cool.blink.front.javascript.template;
 
 import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import cool.blink.front.utilities.Logs.CustomLevel;

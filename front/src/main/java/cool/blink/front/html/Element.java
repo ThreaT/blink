@@ -1,7 +1,7 @@
 package cool.blink.front.html;
 
 import cool.blink.front.FrontContent;
-import cool.blink.front.exception.InfertileElementException;
+import cool.blink.front.html.exception.InfertileElementException;
 import cool.blink.front.utilities.Elements;
 import cool.blink.front.utilities.Elements.TagType;
 import cool.blink.front.utilities.FrontContents;

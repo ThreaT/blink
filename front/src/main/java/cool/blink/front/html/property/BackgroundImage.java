@@ -3,7 +3,7 @@ package cool.blink.front.html.property;
 import cool.blink.front.FrontContent;
 import cool.blink.front.html.Property;
 import cool.blink.front.html.property.value.BackgroundImageValue;
-import cool.blink.front.template.value.ImageValue;
+import cool.blink.front.css.template.ImageValue;
 
 public class BackgroundImage extends Property {
 

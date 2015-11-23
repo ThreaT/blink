@@ -1,4 +1,4 @@
-package cool.blink.front.template.css;
+package cool.blink.front.css.template;
 
 public final class Base64Backgrounds {
 

@@ -1,4 +1,4 @@
-package cool.blink.front.template.value;
+package cool.blink.front.css.template;
 
 public enum ImageValue {
 

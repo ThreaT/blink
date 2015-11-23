@@ -1,4 +1,4 @@
-package cool.blink.front.template.value;
+package cool.blink.front.javascript.template;
 
 public enum ToggleValue {
 

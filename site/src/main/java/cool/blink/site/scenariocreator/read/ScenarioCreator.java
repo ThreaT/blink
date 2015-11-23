@@ -37,7 +37,7 @@ import cool.blink.front.html.property.value.MarginLeftValue;
 import cool.blink.front.html.property.value.MarginRightValue;
 import cool.blink.front.html.property.value.MarginTopValue;
 import cool.blink.front.html.property.value.WidthValue;
-import cool.blink.front.template.html.Reset;
+import cool.blink.front.css.template.Reset;
 import cool.blink.site.Application;
 import cool.blink.site.home.read.Home;
 import java.util.logging.Logger;

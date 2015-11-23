@@ -1,4 +1,4 @@
-package cool.blink.front.exception;
+package cool.blink.front.html.exception;
 
 public class InfertileElementException extends RuntimeException {
 

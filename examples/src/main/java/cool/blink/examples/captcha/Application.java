@@ -1,6 +1,6 @@
 package cool.blink.examples.captcha;
 
-import cool.blink.front.template.javascript.Captcha;
+import cool.blink.front.javascript.template.Captcha;
 import java.awt.Color;
 import java.awt.Font;
 import java.io.File;
