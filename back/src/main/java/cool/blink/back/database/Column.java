@@ -1,6 +1,6 @@
 package cool.blink.back.database;
 
-import cool.blink.back.database.Database.SqlDataType;
+import cool.blink.back.database.Database_Deprecated.SqlDataType;
 
 public class Column {
 

@@ -9,7 +9,7 @@ public class Table {
     private String name;
     private String type;
     private String remarks;
-    private Database database;
+    private Database_Deprecated database;
     private List<Column> columns;
     private List<Record> records;
 
@@ -27,7 +27,7 @@ public class Table {
         this.records = null;
     }
 
-    public Table(String catalog, String schema, String name, String type, String remarks, Database database, List<Column> columns, List<Record> records) {
+    public Table(String catalog, String schema, String name, String type, String remarks, Database_Deprecated database, List<Column> columns, List<Record> records) {
         this.catalog = catalog;
         this.schema = schema;
         this.name = name.toLowerCase();
@@ -94,11 +94,11 @@ public class Table {
         this.records = records;
     }
 
-    public Database getDatabase() {
+    public Database_Deprecated getDatabase() {
         return database;
     }
 
-    public void setDatabase(Database database) {
+    public void setDatabase(Database_Deprecated database) {
         this.database = database;
     }
 
