@@ -1,35 +1,30 @@
 package cool.blink.back.database;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-public abstract class Record {
+public final class Record {
 
-    private Table table;
-    private List<Cell> cells;
+    private final Table table;
+    private final List<Cell> cells;
 
-    public Record() {
-
+    public Record(final Table table) {
+        this.table = table;
+        this.cells = new ArrayList<>();
     }
 
-    public Record(final Table table, final List<Cell> cells) {
+    public Record(final Table table, final Cell... cells) {
         this.table = table;
-        this.cells = cells;
+        this.cells = Arrays.asList(cells);
     }
 
     public Table getTable() {
         return table;
     }
 
-    public void setTable(Table table) {
-        this.table = table;
-    }
-
     public List<Cell> getCells() {
         return cells;
-    }
-
-    public void setCells(List<Cell> cells) {
-        this.cells = cells;
     }
 
 }

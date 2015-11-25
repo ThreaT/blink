@@ -2,7 +2,7 @@ package cool.blink.back.core;
 
 import cool.blink.back.cluster.Cluster;
 import cool.blink.back.cluster.Node;
-import cool.blink.back.database.Database_Deprecated;
+import cool.blink.back.database.Database;
 import cool.blink.back.search.Result;
 import cool.blink.back.session.Session;
 import cool.blink.back.utilities.Logs;
@@ -24,7 +24,7 @@ public abstract class Blink {
     private static List<Scenario> scenarios;
     private static List<Result> results;
     private static Scenario fail;
-    private static Database_Deprecated database;
+    private static Database database;
     private static WebServer webServer;
     private static final Set<Session> sessions = new HashSet<>();
 
@@ -40,7 +40,7 @@ public abstract class Blink {
         prepareSupportedUrlsForCluster();
     }
 
-    public Blink(Scenario fail, WebServer webServer, Database_Deprecated database, Cluster cluster, Node node, Scenario... scenarios) {
+    public Blink(Scenario fail, WebServer webServer, Database database, Cluster cluster, Node node, Scenario... scenarios) {
         Blink.cluster = cluster;
         Blink.node = node;
         Blink.scenarios = Arrays.asList(scenarios);
@@ -65,7 +65,7 @@ public abstract class Blink {
         prepareSupportedUrlsForCluster();
     }
 
-    public Blink(List<Result> results, Scenario fail, WebServer webServer, Database_Deprecated database, Cluster cluster, Node node, Scenario... scenarios) {
+    public Blink(List<Result> results, Scenario fail, WebServer webServer, Database database, Cluster cluster, Node node, Scenario... scenarios) {
         Blink.cluster = cluster;
         Blink.node = node;
         Blink.results = results;
@@ -139,7 +139,7 @@ public abstract class Blink {
         Blink.cluster = cluster;
     }
 
-    public static Database_Deprecated getDatabase() {
+    public static Database getDatabase() {
         return database;
     }
 
@@ -151,7 +151,7 @@ public abstract class Blink {
         Blink.node = node;
     }
 
-    public static void setDatabase(Database_Deprecated database) {
+    public static void setDatabase(Database database) {
         Blink.database = database;
     }
 

@@ -1,9 +1,8 @@
 package cool.blink.back.search;
 
-import cool.blink.back.database.Record;
 import java.util.Objects;
 
-public class Query extends Record {
+public class Query {
 
     private Long id;
     private String query;

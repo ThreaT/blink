@@ -1,8 +1,6 @@
 package cool.blink.examples.helloworld.table;
 
-import cool.blink.back.database.Record;
-
-public class Foo extends Record {
+public class Foo {
 
     private Long id;
     private String name;

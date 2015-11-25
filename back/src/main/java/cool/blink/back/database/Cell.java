@@ -1,42 +1,38 @@
 package cool.blink.back.database;
 
-public class Cell {
+public final class Cell {
 
     private Record record;
     private Column column;
     private Object object;
 
-    public Cell() {
-
-    }
-
-    public Cell(Record record, Column column, Object object) {
+    public Cell(final Record record, final Column column, final Object object) {
         this.record = record;
         this.column = column;
         this.object = object;
     }
 
-    public Record getRecord() {
+    public final Record getRecord() {
         return record;
     }
 
-    public void setRecord(Record record) {
+    public final void setRecord(final Record record) {
         this.record = record;
     }
 
-    public Column getColumn() {
+    public final Column getColumn() {
         return column;
     }
 
-    public void setColumn(Column column) {
+    public final void setColumn(final Column column) {
         this.column = column;
     }
 
-    public Object getObject() {
+    public final Object getObject() {
         return object;
     }
 
-    public void setObject(Object object) {
+    public final void setObject(final Object object) {
         this.object = object;
     }
 

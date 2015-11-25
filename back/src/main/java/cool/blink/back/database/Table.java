@@ -1,36 +1,34 @@
 package cool.blink.back.database;
 
+import java.util.ArrayList;
 import java.util.List;
 
-public class Table {
+public final class Table {
 
-    private String catalog;
-    private String schema;
-    private String name;
-    private String type;
-    private String remarks;
-    private Database_Deprecated database;
-    private List<Column> columns;
-    private List<Record> records;
+    private final String catalog;
+    private final String schema;
+    private final String name;
+    private final String type;
+    private final String remarks;
+    private final Database database;
+    private final List<Column> columns;
+    private final List<Record> records;
 
-    public Table() {
-    }
-
-    public Table(String name) {
+    public Table(final String name) {
         this.catalog = null;
         this.schema = null;
-        this.name = name.toLowerCase();
+        this.name = name.toUpperCase();
         this.type = null;
         this.remarks = null;
         this.database = null;
-        this.columns = null;
-        this.records = null;
+        this.columns = new ArrayList<>();
+        this.records = new ArrayList<>();
     }
 
-    public Table(String catalog, String schema, String name, String type, String remarks, Database_Deprecated database, List<Column> columns, List<Record> records) {
+    public Table(final String catalog, final String schema, final String name, final String type, final String remarks, final Database database, final List<Column> columns, final List<Record> records) {
         this.catalog = catalog;
         this.schema = schema;
-        this.name = name.toLowerCase();
+        this.name = name.toUpperCase();
         this.type = type;
         this.remarks = remarks;
         this.database = database;
@@ -38,72 +36,40 @@ public class Table {
         this.records = records;
     }
 
-    public String getCatalog() {
+    public final String getCatalog() {
         return catalog;
     }
 
-    public void setCatalog(String catalog) {
-        this.catalog = catalog;
-    }
-
-    public String getSchema() {
+    public final String getSchema() {
         return schema;
     }
 
-    public void setSchema(String schema) {
-        this.schema = schema;
-    }
-
-    public String getName() {
+    public final String getName() {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getType() {
+    public final String getType() {
         return type;
     }
 
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public String getRemarks() {
+    public final String getRemarks() {
         return remarks;
     }
 
-    public void setRemarks(String remarks) {
-        this.remarks = remarks;
-    }
-
-    public List<Column> getColumns() {
+    public final List<Column> getColumns() {
         return columns;
     }
 
-    public void setColumns(List<Column> columns) {
-        this.columns = columns;
-    }
-
-    public List<Record> getRecords() {
+    public final List<Record> getRecords() {
         return records;
     }
 
-    public void setRecords(List<Record> records) {
-        this.records = records;
-    }
-
-    public Database_Deprecated getDatabase() {
+    public final Database getDatabase() {
         return database;
     }
 
-    public void setDatabase(Database_Deprecated database) {
-        this.database = database;
-    }
-
     @Override
-    public String toString() {
+    public final String toString() {
         return "Table{" + "catalog=" + catalog + ", schema=" + schema + ", name=" + name + ", type=" + type + ", remarks=" + remarks + ", database=" + database + ", columns=" + columns + ", records=" + records + '}';
     }
 }

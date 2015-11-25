@@ -9,6 +9,8 @@ import cool.blink.back.core.Response;
 import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
+import cool.blink.back.database.Parameter;
+import cool.blink.back.database.Record;
 import cool.blink.back.exception.DuplicateNodeIdException;
 import cool.blink.back.session.Session;
 import cool.blink.back.utilities.HttpRequests;
@@ -331,7 +333,7 @@ public class Cluster {
                             if ((process != null) && (process.getProcessType().equals(ProcessType.TotalActionsRequest))) {
                                 try {
                                     Node node = process.getNode();
-                                    List<Action> nodeActions = (List<Action>) Blink.getDatabase().statement("SELECT * FROM action WHERE nodeId = " + node.getId(), Action.class);
+                                    List<Record> nodeActions = Blink.getDatabase().readRecords(Action.class, "SELECT * FROM ACTION WHERE nodeId = ?", new Parameter(1, node.getId(), Long.class));
                                     Integer totalMissingActions = (Integer) process.getObject() - nodeActions.size();
                                     objectOutputStream.writeObject(new Process(totalMissingActions, Blink.getNode(), ProcessType.TotalActionsResponse));
                                 } catch (IOException ex) {
@@ -340,9 +342,9 @@ public class Cluster {
                             }
                             if ((process != null) && (process.getProcessType().equals(ProcessType.MissingActionRecordRequest))) {
                                 Action action = (Action) process.getObject();
-                                Boolean hasAction = (!((List<Action>) Blink.getDatabase().statement("SELECT * FROM action WHERE ms = " + action.getMs() + " AND nodeId = " + action.getNodeId() + " LIMIT 1", Action.class)).isEmpty());
+                                Boolean hasAction = (!(Blink.getDatabase().readRecords(Action.class, "SELECT * FROM action WHERE ms = " + action.getMs() + " AND nodeId = " + action.getNodeId() + " LIMIT 1")).isEmpty());
                                 if (!hasAction) {
-                                    Blink.getDatabase().statement("INSERT INTO action (ms, nodeId, forwardStatement, rollbackStatement, timeOfExecution) VALUES (" + action.getMs() + "," + action.getNodeId() + "," + action.getForwardStatement() + "," + action.getRollbackStatement() + "," + action.getTimeOfExecution() + ");");
+                                    Blink.getDatabase().execute("INSERT INTO action (ms, nodeId, forwardStatement, rollbackStatement, timeOfExecution) VALUES (" + action.getMs() + "," + action.getNodeId() + "," + action.getForwardStatement() + "," + action.getRollbackStatement() + "," + action.getTimeOfExecution() + ");");
                                 }
                             }
                             if ((process != null) && (process.getProcessType().equals(ProcessType.SessionUpdateRequest))) {
@@ -357,7 +359,7 @@ public class Cluster {
                                     }
                                 }
                             }
-                        } catch (SQLException | ClassNotFoundException | IllegalAccessException | InstantiationException ex) {
+                        } catch (SQLException | ClassNotFoundException ex) {
                             Logger.getLogger(Cluster.class.getName()).log(Priority.HIGHEST, null, ex);
                         }
                     }
@@ -572,7 +574,7 @@ public class Cluster {
         public final Integer totalActionsRequest(final Node node) {
             Integer totalActions = 0;
             try {
-                totalActions = Blink.getDatabase().count("action", "nodeName = " + Blink.getNode().getId());
+                totalActions = Blink.getDatabase().readRecords(Action.class, "SELECT * FROM ACTION WHERE nodeId = ?", new Parameter(1, Blink.getNode().getId(), Blink.getNode().getId().getClass())).size();
             } catch (ClassNotFoundException | SQLException ex) {
                 Logger.getLogger(Cluster.class.getName()).log(Priority.HIGHEST, null, ex);
             }
@@ -647,7 +649,7 @@ public class Cluster {
             ObjectOutputStream objectOutputStream = null;
             ObjectInputStream objectInputStream = null;
             try {
-                nextSentAction = ((List<Action>) Blink.getDatabase().statement(sql, Action.class)).get(0);
+                nextSentAction = (Action) Blink.getDatabase().recordToObject(Blink.getDatabase().readRecords(Action.class, sql).get(0), new Action());
                 socket = new Socket(node.getAddress(), node.getPort());
                 socket.setSoTimeout(Blink.getCluster().getTimeoutInMillis());
                 objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
@@ -660,7 +662,7 @@ public class Cluster {
                 //Logger.getLogger(Cluster.class.getName()).log(Priority.HIGHEST, null, ex);
             } catch (SocketException | SocketTimeoutException | StreamCorruptedException | EOFException ex) {
                 //Logger.getLogger(Cluster.class.getName()).log(Priority.HIGHEST, null, ex);
-            } catch (IOException | ClassNotFoundException | SQLException | IllegalAccessException | InstantiationException ex) {
+            } catch (IOException | ClassNotFoundException | SQLException ex) {
                 Logger.getLogger(Cluster.class.getName()).log(Priority.HIGHEST, null, ex);
             } finally {
                 try {
@@ -776,8 +778,8 @@ public class Cluster {
                 Action oldestNonExecutedAction = ((List<Action>) Blink.getDatabase().statement("SELECT * FROM action WHERE timeOfExecution NOT NULL AND timeOfExecution <> '' ORDER BY ms DESC LIMIT 1", Action.class)).get(0);
                 List<Action> actionsToRollback = (List<Action>) Blink.getDatabase().statement("SELECT * FROM action WHERE ms <= " + lastExecutedAction.getMs() + " AND ms >= " + oldestNonExecutedAction.getMs() + " AND timeOfExecution NOT NULL AND timeOfExecution <> '' ORDER BY ms DESC", Action.class);
                 for (Action action : actionsToRollback) {
-                    Blink.getDatabase().statement(action.getRollbackStatement());
-                    Blink.getDatabase().statement("UPDATE action SET timeOfExecution = NULL WHERE ms = " + action.getMs() + " AND nodeId = " + action.getNodeId());
+                    Blink.getDatabase().unsafeExecute(action.getRollbackStatement());
+                    Blink.getDatabase().unsafeExecute("UPDATE action SET timeOfExecution = NULL WHERE ms = " + action.getMs() + " AND nodeId = " + action.getNodeId());
                 }
             } catch (SQLException | ClassNotFoundException | IllegalAccessException | InstantiationException ex) {
                 Logger.getLogger(Cluster.class.getName()).log(Priority.HIGHEST, null, ex);

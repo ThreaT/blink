@@ -3,79 +3,106 @@ package cool.blink.back.database;
 import cool.blink.back.cluster.Action;
 import cool.blink.back.utilities.Logs;
 import cool.blink.back.utilities.Logs.Priority;
+import cool.blink.back.utilities.Reflections;
 import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.Date;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLDataException;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * API
  *
+ * <h3>Misc</h3>
  * <ul>
- * <li>connect()</li>
- * <li>disconnect()</li>
+ * <li>public final synchronized void connect()</li>
+ * <li>public final synchronized void disconnect()</li>
+ * <li>public enum SqlDataType</li>
+ * <li>public final SqlDataType sqlDataTypeMapper(final String type)</li>
+ * <li>public final SqlDataType sqlDataMapper(final Class clazz)</li>
+ * <li>public final Class javaDataMapper(final SqlDataType sqlDataType)</li>
+ * <li>public final void unsafeExecute(final String sql)</li>
+ * <li>public final void execute(final String preparedSql, final Parameter...
+ * parameters)</li>
+ * <li>public final void addTransaction(final String preparedSql)</li>
+ * <li>public final void executeAll()</li>
+ * <li>public final Object recordToObject(Record record)</li>
  * </ul>
  *
  * <h3>Create</h3>
  * <br/>
  * <ul>
- * <li>public void createCell - Will not be implemented</li>
- * <li>public void createRecord(Object object)</li>
- * <li>public void createColumn - Will not be implemented</li>
- * <li>public void createTable(Class clazz)</li>
- * <li>public void createDatabase()</li>
+ * <li>public final void createCell - Will not be implemented</li>
+ * <li>public final void createRecord(final Object object)</li>
+ * <li>public final void createColumn - Will not be implemented</li>
+ * <li>public final void createTable(final Class clazz)</li>
+ * <li>public final void createDatabase()</li>
  * </ul>
  *
  * <h3>Read</h3>
  * <br/>
  * <ul>
- * <li>public List&gt;Cell&lt; readCells - Will not be implemented</li>
- * <li>public List&gt;Record&lt; readRecords(Class clazz, String
- * whereClause)</li>
- * <li>public Column readColumn - Will not be implemented</li>
- * <li>public Table readTable(Class clazz)</li>
- * <li>public Boolean tableExists(Table table)</li>
- * <li>public Database readDatabase - Will not be implemented</li>
- * <li>public Boolean databaseExists()</li>
+ * <li>public final List&gt;Cell&lt; readCells - Will not be implemented</li>
+ * <li>public final List&gt;Record&lt; readRecords(final Class clazz, final
+ * String whereClause)</li>
+ * <li>public final Column readColumn - Will not be implemented</li>
+ * <li>public final Table readTable(final Class clazz)</li>
+ * <li>public final Boolean tableExists(final Table table)</li>
+ * <li>public final Database readDatabase - Will not be implemented</li>
+ * <li>public final Boolean databaseExists()</li>
  * </ul>
  *
  * <h3>Update</h3>
  * <br/>
  * <ul>
- * <li>public void updateCell - Will not be implemented</li>
- * <li>public void updateRecord(Object oldRecord, Object newRecord)</li>
- * <li>public void updateColumn - Will not be implemented</li>
- * <li>public void updateTable - Will not be implemented</li>
- * <li>public void updateDatabase()</li>
+ * <li>public final void updateCell - Will not be implemented</li>
+ * <li>public final void updateRecord - Will not be implemented</li>
+ * <li>public final void updateColumn - Will not be implemented</li>
+ * <li>public final void updateTable - Will not be implemented</li>
+ * <li>public final void updateDatabase - Will not be implemented</li>
  * </ul>
  *
  * <h3>Delete</h3>
  * <br/>
  * <ul>
- * <li>public void deleteCell - Will not be implemented</li>
- * <li>public void deleteRecord(Object object)</li>
- * <li>public void deleteColumn - Will not be implemented</li>
- * <li>public void deleteTable(Class clazz)</li>
- * <li>public void deleteDatabase()</li>
+ * <li>public final void deleteCell - Will not be implemented</li>
+ * <li>public final void deleteRecord - Will not be implemented</li>
+ * <li>public final void deleteColumn - Will not be implemented</li>
+ * <li>public final void deleteTable(final Class clazz)</li>
+ * <li>public final void deleteDatabase()</li>
  * </ul>
  */
 public final class Database {
 
-    private String name;
-    private String destination;
-    private List<Class> tables;
+    private final String name;
+    private final String destination;
+    private final List<Class> tables;
+    private final Map<String, List<Parameter>> transactions;
     private Connection connection;
 
-    public Database(final String name, final String destination) {
+    public Database(final String name, final String destination, final Class... tables) {
         this.name = name.toLowerCase();
         this.destination = destination;
         this.tables = new ArrayList<>();
+        this.transactions = new HashMap<>();
 
         //Add action table
         this.tables.add(Action.class);
@@ -85,79 +112,381 @@ public final class Database {
             for (Class clazz : this.tables) {
                 createTable(clazz);
             }
-        } catch (SQLException | ClassNotFoundException | IllegalAccessException | InstantiationException ex) {
-            Logger.getLogger(Database_Deprecated.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (SQLException | ClassNotFoundException ex) {
+            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalAccessException | IllegalArgumentException ex) {
+            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
-    public String getName() {
+    public final String getName() {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getDestination() {
+    public final String getDestination() {
         return destination;
     }
 
-    public void setDestination(String destination) {
-        this.destination = destination;
-    }
-
-    public List<Class> getTables() {
+    public final List<Class> getTables() {
         return tables;
     }
 
-    public void setTables(List<Class> tables) {
-        this.tables = tables;
+    public Map<String, List<Parameter>> getTransactions() {
+        return transactions;
     }
 
-    public Connection getConnection() {
+    public final Connection getConnection() {
         return connection;
     }
 
-    public void setConnection(Connection connection) {
+    public final void setConnection(final Connection connection) {
         this.connection = connection;
     }
 
-    public synchronized void connect() throws ClassNotFoundException, SQLException {
+    public final synchronized void connect() throws ClassNotFoundException, SQLException {
         Class.forName("org.apache.derby.jdbc.EmbeddedDriver");
         connection = DriverManager.getConnection("jdbc:derby:" + this.destination + "/" + this.name);
     }
 
-    public synchronized void disconnect() throws SQLException {
+    public final synchronized void disconnect() throws SQLException {
         if (this.connection != null) {
             this.connection.close();
         }
     }
 
-    public void createRecord(Object object) {
+    public enum SqlDataType {
 
+        BIGINT,
+        BLOB,
+        CHAR,
+        CLOB,
+        DATE,
+        DECIMAL,
+        DOUBLE,
+        FLOAT,
+        INTEGER,
+        NUMERIC,
+        REAL,
+        SMALLINT,
+        TIME,
+        TIMESTAMP,
+        VARCHAR
     }
 
-    public void createTable(Class clazz) throws ClassNotFoundException, SQLException {
-        Table table = new Table(clazz.getSimpleName());
-        List<Column> columns = this.listVirtualColumns(clazz);
-        table.setColumns(columns);
-        if (tableExists(table)) {
-            Logger.getLogger(Database_Deprecated.class.getName()).log(Priority.HIGH, "{0} table already exists.", clazz.getSimpleName());
-        } else {
-            this.createPhysicalTable(table);
-            if (tableExists(table)) {
-                Logger.getLogger(Database_Deprecated.class.getName()).log(Priority.MEDIUM, "{0} table has been created.", clazz.getSimpleName());
+    public final SqlDataType sqlDataTypeMapper(final String type) {
+        SqlDataType sqlDataType = null;
+        switch (type.toUpperCase()) {
+            case "BIGINT":
+                sqlDataType = SqlDataType.BIGINT;
+                break;
+            case "BLOB":
+                sqlDataType = SqlDataType.BLOB;
+                break;
+            case "CHAR":
+                sqlDataType = SqlDataType.CHAR;
+                break;
+            case "CLOB":
+                sqlDataType = SqlDataType.CLOB;
+                break;
+            case "DATE":
+                sqlDataType = SqlDataType.DATE;
+                break;
+            case "DECIMAL":
+                sqlDataType = SqlDataType.DECIMAL;
+                break;
+            case "DOUBLE":
+                sqlDataType = SqlDataType.DOUBLE;
+                break;
+            case "FLOAT":
+                sqlDataType = SqlDataType.FLOAT;
+                break;
+            case "INTEGER":
+                sqlDataType = SqlDataType.INTEGER;
+                break;
+            case "NUMERIC":
+                sqlDataType = SqlDataType.NUMERIC;
+                break;
+            case "REAL":
+                sqlDataType = SqlDataType.REAL;
+                break;
+            case "SMALLINT":
+                sqlDataType = SqlDataType.SMALLINT;
+                break;
+            case "TIME":
+                sqlDataType = SqlDataType.TIME;
+                break;
+            case "TIMESTAMP":
+                sqlDataType = SqlDataType.TIMESTAMP;
+                break;
+            case "VARCHAR":
+                sqlDataType = SqlDataType.VARCHAR;
+                break;
+        }
+        return sqlDataType;
+    }
+
+    public final SqlDataType sqlDataMapper(final Class clazz) {
+        SqlDataType sqlDataType;
+        switch (clazz.getSimpleName()) {
+            case "Boolean":
+                sqlDataType = SqlDataType.SMALLINT;
+                break;
+            case "String":
+                sqlDataType = SqlDataType.VARCHAR;
+                break;
+            case "Integer":
+                sqlDataType = SqlDataType.INTEGER;
+                break;
+            case "Long":
+                sqlDataType = SqlDataType.BIGINT;
+                break;
+            case "Object":
+                sqlDataType = SqlDataType.BLOB;
+                break;
+            case "Date":
+                sqlDataType = SqlDataType.DATE;
+                break;
+            case "DateTime":
+                sqlDataType = SqlDataType.TIMESTAMP;
+                break;
+            case "char":
+                sqlDataType = SqlDataType.CHAR;
+                break;
+            default:
+                sqlDataType = SqlDataType.BLOB;
+                break;
+        }
+        return sqlDataType;
+    }
+
+    public final Class javaDataMapper(final SqlDataType sqlDataType) {
+        Class clazz = null;
+        switch (sqlDataType) {
+            case VARCHAR:
+                clazz = String.class;
+                break;
+            case INTEGER:
+                clazz = Integer.class;
+                break;
+            case BLOB:
+                clazz = Object.class;
+                break;
+            case DATE:
+                clazz = java.sql.Date.class;
+                break;
+            case CHAR:
+                clazz = char.class;
+                break;
+        }
+        return clazz;
+    }
+
+    public final void unsafeExecute(final String sql) throws ClassNotFoundException, SQLException {
+        connect();
+        try (Statement statement = this.connection.createStatement()) {
+            statement.execute(sql);
+        }
+        disconnect();
+    }
+
+    public final void execute(final String preparedSql, final Parameter... parameters) throws ClassNotFoundException, SQLException {
+        Integer totalPlaceholders = StringUtils.countMatches(preparedSql, "?");
+        if (totalPlaceholders != Arrays.asList(parameters).size()) {
+            throw new SQLDataException("Incorrect number of parameters allocated for provided sql statement");
+        }
+        connect();
+        PreparedStatement preparedStatement = this.connection.prepareStatement(preparedSql);
+        for (Parameter parameter : parameters) {
+            switch (parameter.getType().getSimpleName().toLowerCase()) {
+                case "string":
+                    preparedStatement.setString(parameter.getPlaceholderIndex(), (String) parameter.getValue());
+                    break;
+                case "integer":
+                    preparedStatement.setInt(parameter.getPlaceholderIndex(), (Integer) parameter.getValue());
+                    break;
+                case "date":
+                    preparedStatement.setDate(parameter.getPlaceholderIndex(), (Date) parameter.getValue());
+                    break;
+                case "long":
+                    preparedStatement.setLong(parameter.getPlaceholderIndex(), (Long) parameter.getValue());
+                    break;
+                default:
+                    preparedStatement.setBlob(parameter.getPlaceholderIndex(), (Blob) parameter.getValue());
+                    break;
+            }
+        }
+        preparedStatement.executeUpdate();
+        preparedStatement.closeOnCompletion();
+        disconnect();
+    }
+
+    public final void addTransaction(final String preparedSql, final Parameter... parameters) {
+        this.transactions.put(preparedSql, Arrays.asList(parameters));
+    }
+
+    public final void executeAll() throws ClassNotFoundException, SQLException {
+        PreparedStatement preparedStatement = null;
+        for (Map.Entry<String, List<Parameter>> entry : this.transactions.entrySet()) {
+            String preparedSql = entry.getKey();
+            List<Parameter> parameters = entry.getValue();
+            Integer totalPlaceholders = StringUtils.countMatches(preparedSql, "?");
+            if (totalPlaceholders != Arrays.asList(parameters).size()) {
+                throw new SQLDataException("Incorrect number of parameters allocated for provided sql statement");
+            }
+            connect();
+            preparedStatement = this.connection.prepareStatement(preparedSql);
+            for (Parameter parameter : parameters) {
+                switch (parameter.getType().getSimpleName().toLowerCase()) {
+                    case "string":
+                        preparedStatement.setString(parameter.getPlaceholderIndex(), (String) parameter.getValue());
+                        break;
+                    case "integer":
+                        preparedStatement.setInt(parameter.getPlaceholderIndex(), (Integer) parameter.getValue());
+                        break;
+                    case "date":
+                        preparedStatement.setDate(parameter.getPlaceholderIndex(), (Date) parameter.getValue());
+                        break;
+                    case "long":
+                        preparedStatement.setLong(parameter.getPlaceholderIndex(), (Long) parameter.getValue());
+                        break;
+                    default:
+                        preparedStatement.setBlob(parameter.getPlaceholderIndex(), (Blob) parameter.getValue());
+                        break;
+                }
+            }
+            preparedStatement.addBatch();
+        }
+        if (preparedStatement != null) {
+            preparedStatement.executeBatch();
+            preparedStatement.closeOnCompletion();
+        }
+        disconnect();
+    }
+
+    public final Object recordToObject(final Record record, Object object) throws IllegalAccessException, IllegalArgumentException {
+        List<Field> fields = Reflections.classToFieldsList(object.getClass());
+        for (Cell cell : record.getCells()) {
+            for (Field field : fields) {
+                if (field.getName().equalsIgnoreCase(cell.getColumn().getName())) {
+                    field.set(object, cell.getObject());
+                }
+            }
+        }
+        return null;
+    }
+
+    public final void createRecord(final Object object) throws IllegalAccessException, IllegalArgumentException, ClassNotFoundException, SQLException {
+        //Get parameters
+        List<Parameter> parameters = new ArrayList<>();
+        List<Field> fields = Reflections.classToFieldsList(object.getClass());
+        for (int i = 0; i < fields.size(); i++) {
+            Integer placeholderIndex = i;
+            Object value = fields.get(i).get(new Object());
+            Class type = value.getClass();
+            Parameter parameter = new Parameter(placeholderIndex, value, type);
+            parameters.add(parameter);
+        }
+
+        //Get preparedSql
+        String preparedSql = "INSERT INTO " + object.getClass().getSimpleName().toUpperCase() + " VALUES(";
+        for (int i = 0; i < parameters.size(); i++) {
+            if (i + 1 < parameters.size()) {
+                preparedSql += "?,";
             } else {
-                Logger.getLogger(Database_Deprecated.class.getName()).log(Priority.HIGH, "There was a problem while attempting to create a physical table titled {0}.", clazz.getSimpleName());
+                preparedSql += "?)";
+            }
+        }
+
+        //Execute preparedSql
+        connect();
+        PreparedStatement preparedStatement = this.connection.prepareStatement(preparedSql);
+        for (Parameter parameter : parameters) {
+            switch (parameter.getType().getSimpleName().toLowerCase()) {
+                case "string":
+                    preparedStatement.setString(parameter.getPlaceholderIndex(), (String) parameter.getValue());
+                    break;
+                case "integer":
+                    preparedStatement.setInt(parameter.getPlaceholderIndex(), (Integer) parameter.getValue());
+                    break;
+                case "date":
+                    preparedStatement.setDate(parameter.getPlaceholderIndex(), (Date) parameter.getValue());
+                    break;
+                case "long":
+                    preparedStatement.setLong(parameter.getPlaceholderIndex(), (Long) parameter.getValue());
+                    break;
+                default:
+                    preparedStatement.setBlob(parameter.getPlaceholderIndex(), (Blob) parameter.getValue());
+                    break;
+            }
+        }
+        preparedStatement.executeUpdate();
+        preparedStatement.closeOnCompletion();
+        disconnect();
+    }
+
+    public final void createTable(final Class clazz) throws ClassNotFoundException, SQLException, IllegalAccessException, IllegalArgumentException {
+        Table table = new Table(clazz.getSimpleName());
+
+        //Generate the column classes for clazz
+        List<Field> classFields = Reflections.classToFieldsList(clazz);
+        Column column;
+        List<Column> columns = new ArrayList<>();
+        for (Field field : classFields) {
+            String columnName = field.getName();
+            SqlDataType sqlDataType = sqlDataMapper(field.getType());
+            Integer length = null;
+            if (sqlDataType.equals(SqlDataType.VARCHAR)) {
+                length = ColumnDefaults.getDefaultVarcharLength();
+            }
+            Boolean primaryKey = ColumnDefaults.getDefaultPrimaryKey(field.getName());
+            Boolean notNull = ColumnDefaults.getDefaultNotNull();
+            column = new Column(columnName, sqlDataType, length, primaryKey, notNull, table);
+            columns.add(column);
+        }
+
+        table.getColumns().addAll(columns);
+        if (tableExists(table)) {
+            Logger.getLogger(Database.class.getName()).log(Priority.HIGH, "{0} table already exists.", clazz.getSimpleName());
+        } else {
+            //Create the table in the physical database
+            String createStatement = "CREATE TABLE ";
+            Column primaryKey = null;
+            SqlDataType sqlDataType;
+            createStatement += table.getName() + "(";
+            for (int i = 0; i < table.getColumns().size(); i++) {
+                createStatement += table.getColumns().get(i).getName();
+                sqlDataType = table.getColumns().get(i).getSqlDataType();
+                createStatement += " " + sqlDataType;
+                if ((table.getColumns().get(i).getLength() != null) && (sqlDataType != SqlDataType.BIGINT)) {
+                    createStatement += (table.getColumns().get(i).getLength() == null ? "" : " " + "(" + table.getColumns().get(i).getLength() + ")");
+                }
+                createStatement += (table.getColumns().get(i).getNotNull() == true ? " " + "NOT NULL" : "");
+                if (table.getColumns().get(i).getPrimaryKey() == true) {
+                    primaryKey = table.getColumns().get(i);
+                }
+                if (i == table.getColumns().size() - 1) {
+                    if (primaryKey != null) {
+                        createStatement += ", PRIMARY KEY (" + primaryKey.getName() + ")";
+                    }
+                } else {
+                    createStatement += ", ";
+                }
+            }
+            createStatement += ")";
+            execute(createStatement);
+            if (tableExists(table)) {
+                Logger.getLogger(Database.class.getName()).log(Priority.MEDIUM, "{0} table has been created.", clazz.getSimpleName());
+            } else {
+                Logger.getLogger(Database.class.getName()).log(Priority.HIGH, "There was a problem while attempting to create a physical table titled {0}.", clazz.getSimpleName());
             }
         }
     }
 
-    public void createDatabase() throws SQLException {
+    public final void createDatabase() throws SQLException {
         if (databaseExists()) {
             Logger.getLogger(Database.class.getName()).log(Logs.Priority.HIGH, "Database already exists in {0}/{1}, this database will be used.", new Object[]{this.getDestination(), this.getName()});
         } else {
-            connection = DriverManager.getConnection("jdbc:derby:" + this.getDestination() + "/" + this.getName() + ";" + "create=true");
+            this.connection = DriverManager.getConnection("jdbc:derby:" + this.getDestination() + "/" + this.getName() + ";" + "create=true");
             disconnect();
             if (databaseExists()) {
                 Logger.getLogger(Database.class.getName()).log(Logs.Priority.MEDIUM, "Database created in {0}/{1}", new Object[]{this.getDestination(), this.getName()});
@@ -167,15 +496,122 @@ public final class Database {
         }
     }
 
-    public List<Record> readRecords(Class clazz, String whereClause) {
-        return null;
+    public final List<Record> readRecords(final Class clazz, final String preparedSql, final Parameter... parameters) throws ClassNotFoundException, SQLException {
+        Table table = new Table(clazz.getSimpleName());
+        Integer totalPlaceholders = StringUtils.countMatches(preparedSql, "?");
+        if (totalPlaceholders != Arrays.asList(parameters).size()) {
+            throw new SQLDataException("Incorrect number of parameters allocated for provided sql statement");
+        }
+        connect();
+        PreparedStatement preparedStatement = this.connection.prepareStatement(preparedSql);
+        for (Parameter parameter : parameters) {
+            switch (parameter.getType().getSimpleName().toLowerCase()) {
+                case "string":
+                    preparedStatement.setString(parameter.getPlaceholderIndex(), (String) parameter.getValue());
+                    break;
+                case "integer":
+                    preparedStatement.setInt(parameter.getPlaceholderIndex(), (Integer) parameter.getValue());
+                    break;
+                case "date":
+                    preparedStatement.setDate(parameter.getPlaceholderIndex(), (Date) parameter.getValue());
+                    break;
+                default:
+                    throw new SQLDataException("Invalid parameter type: " + parameter.toString());
+            }
+        }
+
+        //Get column data
+        Column column = null;
+        DatabaseMetaData columnMeta = this.connection.getMetaData();
+        try (ResultSet columnResultSet = columnMeta.getColumns(null, null, table.getName(), null)) {
+            while (columnResultSet.next()) {
+                String columnName = columnResultSet.getString("COLUMN_NAME");
+                SqlDataType sqlDataType = sqlDataTypeMapper((columnResultSet.getString("TYPE_NAME")));
+                Integer columnLength = columnResultSet.getInt("COLUMN_SIZE");
+                Boolean columnPrimaryKey = columnResultSet.getString("PKCOLUMN_NAME").equalsIgnoreCase(columnName);
+                Boolean columnNotNull = columnResultSet.getString("NULLABLE").equals("0");
+                column = new Column(columnName, sqlDataType, columnLength, columnPrimaryKey, columnNotNull, table);
+            }
+        }
+
+        //Get records data from resultSet
+        ResultSet resultSet = preparedStatement.executeQuery();
+        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+        List<Cell> cells = new ArrayList<>();
+        while (resultSet.next()) {
+
+            //Get object data
+            for (int i = 0; i < resultSetMetaData.getColumnCount(); i++) {
+                Object object = new Object();
+                if (cells.get(i).getObject() instanceof String) {
+                    object = resultSet.getString(cells.get(i).getColumn().getName());
+                } else if (cells.get(i).getObject() instanceof Integer) {
+                    object = resultSet.getInt(cells.get(i).getColumn().getName());
+                } else if (cells.get(i).getObject() instanceof Object) {
+                    object = resultSet.getBlob(cells.get(i).getColumn().getName());
+                } else if (cells.get(i).getObject() instanceof Date) {
+                    object = resultSet.getDate(cells.get(i).getColumn().getName());
+                }
+                cells.add(new Cell(null, column, object));
+            }
+        }
+
+        //Organize record data and assign records to cells and cells to records
+        List<Record> records = new ArrayList<>();
+        Record record = new Record(table);
+        for (int i = 0; i < cells.size(); i++) {
+            if (i % resultSetMetaData.getColumnCount() == 0) {
+                record = new Record(table);
+            }
+            record.getCells().add(cells.get(i));
+            cells.get(i).setRecord(record);
+        }
+
+        preparedStatement.closeOnCompletion();
+        disconnect();
+        return records;
     }
 
-    public Table readTable(Class clazz) {
-        return null;
+    public final Table readTable(final Class clazz) throws ClassNotFoundException, SQLException {
+        Table table = new Table(clazz.getSimpleName());
+        if (!tableExists(table)) {
+            return null;
+        } else {
+            connect();
+            DatabaseMetaData tableMeta = this.connection.getMetaData();
+            try (ResultSet tableResultSet = tableMeta.getTables(null, null, null, new String[]{"TABLE"})) {
+                while (tableResultSet.next()) {
+                    if (tableResultSet.getString("TABLE_NAME").equalsIgnoreCase(table.getName())) {
+                        List<Column> tableColumns = new ArrayList<>();
+                        DatabaseMetaData columnMeta = this.connection.getMetaData();
+                        try (ResultSet columnResultSet = columnMeta.getColumns(null, null, table.getName(), null)) {
+                            while (columnResultSet.next()) {
+                                String columnName = columnResultSet.getString("COLUMN_NAME");
+                                SqlDataType sqlDataType = sqlDataTypeMapper((columnResultSet.getString("TYPE_NAME")));
+                                Integer columnLength = columnResultSet.getInt("COLUMN_SIZE");
+                                Boolean columnPrimaryKey = columnResultSet.getString("PKCOLUMN_NAME").equalsIgnoreCase(columnName);
+                                Boolean columnNotNull = columnResultSet.getString("NULLABLE").equals("0");
+                                Column column = new Column(columnName, sqlDataType, columnLength, columnPrimaryKey, columnNotNull, table);
+                                tableColumns.add(column);
+                            }
+                        }
+                        List<Record> tableRecords = this.readRecords(clazz, "SELECT * FROM " + table.getName());
+                        String tableCatalog = tableResultSet.getString("TABLE_CAT");
+                        String tableSchema = tableResultSet.getString("TABLE_SCHEM");
+                        String tableName = tableResultSet.getString("TABLE_NAME");
+                        String tableType = tableResultSet.getString("TABLE_TYPE");
+                        String tableRemarks = tableResultSet.getString("REMARKS");
+                        table = new Table(tableCatalog, tableSchema, tableName, tableType, tableRemarks, this, tableColumns, tableRecords);
+                        break;
+                    }
+                }
+                tableResultSet.close();
+            }
+            return table;
+        }
     }
 
-    public Boolean tableExists(Table table) throws SQLException, ClassNotFoundException {
+    public final Boolean tableExists(final Table table) throws SQLException, ClassNotFoundException {
         connect();
         DatabaseMetaData databaseMetaData = this.connection.getMetaData();
         ResultSet resultSet = databaseMetaData.getTables(null, null, table.getName().toUpperCase(), null);
@@ -184,9 +620,24 @@ public final class Database {
         return exists;
     }
 
-    public Boolean databaseExists() {
+    public final Boolean databaseExists() {
         File databaseFile = new File(this.getDestination() + "/" + this.getName());
         return databaseFile.exists();
     }
 
+    public final void deleteTable(final Class clazz) throws ClassNotFoundException, SQLException {
+        connect();
+        Statement statement = this.connection.createStatement();
+        String deleteStatement = "DROP TABLE " + clazz.getSimpleName().toUpperCase() + ";";
+        statement.executeUpdate(deleteStatement);
+        disconnect();
+    }
+
+    public final void deleteDatabase() throws IOException, SQLException {
+        disconnect();
+        File databaseLog = new File(this.destination + "/" + "derby.log");
+        databaseLog.delete();
+        File database = new File(this.destination + "/" + this.name);
+        FileUtils.deleteDirectory(database);
+    }
 }

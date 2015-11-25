@@ -7,11 +7,11 @@ import java.util.logging.Logger;
 public class Test {
 
     public static void main(String args[]) {
-        Database_Deprecated database = new Database_Deprecated("TestDB", "", TestClass.class);
+        Database database = new Database("TestDB", "", TestClass.class);
         TestClass tc = new TestClass();
         try {
-            database.createPhysicalRecord(tc);
-        } catch (ClassNotFoundException | SQLException ex) {
+            database.createRecord(tc);
+        } catch (ClassNotFoundException | SQLException | IllegalAccessException | IllegalArgumentException ex) {
             Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
         }
     }

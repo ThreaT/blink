@@ -8,6 +8,8 @@ import cool.blink.back.utilities.Longs;
 import cool.blink.back.core.Response;
 import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Url;
+import cool.blink.back.database.Parameter;
+import cool.blink.back.database.Record;
 import cool.blink.back.utilities.Logs.Priority;
 import cool.blink.examples.helloworld.table.Foo;
 import cool.blink.front.Document;
@@ -21,6 +23,7 @@ import cool.blink.front.html.element.Meta;
 import cool.blink.front.html.element.Title;
 import cool.blink.front.html.property.value.HttpEquivValue;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -53,9 +56,9 @@ public class ValidFoo extends Scenario {
             Logger.getLogger(ValidFoo.class.getName()).log(Priority.LOWEST, "Running ValidFoo: main(HttpExchange httpExchange)");
             Foo foo = new Foo(Longs.generateUniqueId(), Foo.class.getSimpleName().toLowerCase());
             foo.setName(request.getParameters().get("name"));
-            Blink.getDatabase().createPhysicalRecord(Blink.getDatabase().populateRecordDatabaseAndTableAndCells(foo));
+            Blink.getDatabase().createRecord(foo);
             Blink.getWebServer().respond(request, new ValidFooTemplate(foo).getResponse());
-        } catch (SQLException | ClassNotFoundException | IllegalAccessException | IllegalArgumentException | InstantiationException ex) {
+        } catch (SQLException | ClassNotFoundException | IllegalAccessException | IllegalArgumentException ex) {
             Logger.getLogger(ValidFoo.class.getName()).log(Priority.HIGHEST, null, ex);
         }
     }
@@ -73,25 +76,29 @@ public class ValidFoo extends Scenario {
      */
     @Override
     public Report test(Request request) {
-        Logger.getLogger(ValidFoo.class.getName()).log(Priority.LOWEST, "Running ValidFoo: test(HttpExchange httpExchange)");
-        Report report = new Report(2, 2, "100%", "");
-        Long start = System.currentTimeMillis();
-        main(request);
-        Long end = System.currentTimeMillis();
-
-        Foo foo = new Foo();
-        foo.setName(request.getParameters().get("name"));
-
-        if (!Blink.getDatabase().physicalRecordExists(foo)) {
-            report.setSuccessful(report.getSuccessful() - 1);
-            report.appendLog(new String[][]{{"" + Thread.currentThread().getStackTrace()[1].getLineNumber(), "Foo was not persisted to the database for some reason."}});
+        try {
+            Logger.getLogger(ValidFoo.class.getName()).log(Priority.LOWEST, "Running ValidFoo: test(HttpExchange httpExchange)");
+            Report report = new Report(2, 2, "100%", "");
+            Long start = System.currentTimeMillis();
+            main(request);
+            Long end = System.currentTimeMillis();
+            Foo foo = new Foo();
+            foo.setName(request.getParameters().get("name"));
+            List<Record> fooRecords = Blink.getDatabase().readRecords(foo.getClass(), "SELECT * FROM FOO WHERE id = ?", new Parameter(1, foo.getId(), Long.class));
+            if (fooRecords.isEmpty()) {
+                report.setSuccessful(report.getSuccessful() - 1);
+                report.appendLog(new String[][]{{"" + Thread.currentThread().getStackTrace()[1].getLineNumber(), "Foo was not persisted to the database for some reason."}});
+            }
+            if (end - start > 10) {
+                report.setSuccessful(report.getSuccessful() - 1);
+                report.appendLog(new String[][]{{"" + Thread.currentThread().getStackTrace()[1].getLineNumber(), "Processing took too long, it took " + (end - start) + " ms."}});
+            }
+            report.setPercentage(report.calculatePercentage(report.getTotal(), report.getSuccessful()));
+            return report;
+        } catch (ClassNotFoundException | SQLException ex) {
+            Logger.getLogger(ValidFoo.class.getName()).log(Level.SEVERE, null, ex);
         }
-        if (end - start > 10) {
-            report.setSuccessful(report.getSuccessful() - 1);
-            report.appendLog(new String[][]{{"" + Thread.currentThread().getStackTrace()[1].getLineNumber(), "Processing took too long, it took " + (end - start) + " ms."}});
-        }
-        report.setPercentage(report.calculatePercentage(report.getTotal(), report.getSuccessful()));
-        return report;
+        return null;
     }
 
     public static class ValidFooTemplate {

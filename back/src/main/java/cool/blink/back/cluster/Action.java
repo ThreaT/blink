@@ -1,9 +1,8 @@
 package cool.blink.back.cluster;
 
-import cool.blink.back.database.Record;
 import cool.blink.back.exception.InvalidActionParameterException;
 
-public class Action extends Record {
+public class Action {
 
     //ms and nodeName make up the composite primary key for the action table
     private final Long ms;
