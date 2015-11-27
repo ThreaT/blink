@@ -45,10 +45,11 @@ import org.apache.commons.lang3.StringUtils;
  * <li>public final void addTransaction(final String preparedSql)</li>
  * <li>public final void executeAll()</li>
  * <li>public final Object recordToObject(Record record)</li>
+ * <li>public final List&gt;Object&lt; recordsToObjects(final List&gt;Record&lt; records, List&gt;Object&lt; objects)</li>
  * </ul>
  *
  * <h3>Create</h3>
- * <br/>
+ * <br>
  * <ul>
  * <li>public final void createCell - Will not be implemented</li>
  * <li>public final void createRecord(final Object object)</li>
@@ -58,7 +59,7 @@ import org.apache.commons.lang3.StringUtils;
  * </ul>
  *
  * <h3>Read</h3>
- * <br/>
+ * <br>
  * <ul>
  * <li>public final List&gt;Cell&lt; readCells - Will not be implemented</li>
  * <li>public final List&gt;Record&lt; readRecords(final Class clazz, final
@@ -71,7 +72,7 @@ import org.apache.commons.lang3.StringUtils;
  * </ul>
  *
  * <h3>Update</h3>
- * <br/>
+ * <br>
  * <ul>
  * <li>public final void updateCell - Will not be implemented</li>
  * <li>public final void updateRecord - Will not be implemented</li>
@@ -81,7 +82,7 @@ import org.apache.commons.lang3.StringUtils;
  * </ul>
  *
  * <h3>Delete</h3>
- * <br/>
+ * <br>
  * <ul>
  * <li>public final void deleteCell - Will not be implemented</li>
  * <li>public final void deleteRecord - Will not be implemented</li>
@@ -375,6 +376,13 @@ public final class Database {
         return null;
     }
 
+    public final List<Object> recordsToObjects(final List<Record> records, List<Object> objects) throws IllegalAccessException, IllegalArgumentException {
+        for (int i = 0; i < records.size(); i++) {
+            objects.set(i, recordToObject(records.get(i), objects.get(i)));
+        }
+        return objects;
+    }
+
     public final void createRecord(final Object object) throws IllegalAccessException, IllegalArgumentException, ClassNotFoundException, SQLException {
         //Get parameters
         List<Parameter> parameters = new ArrayList<>();
@@ -484,7 +492,7 @@ public final class Database {
 
     public final void createDatabase() throws SQLException {
         if (databaseExists()) {
-            Logger.getLogger(Database.class.getName()).log(Logs.Priority.HIGH, "Database already exists in {0}/{1}, this database will be used.", new Object[]{this.getDestination(), this.getName()});
+            Logger.getLogger(Database.class.getName()).log(Logs.Priority.HIGH, "Database already exists in {0}/{1}, this database will be used.", new Object[]{new File(this.getDestination()).getAbsolutePath(), this.getName()});
         } else {
             this.connection = DriverManager.getConnection("jdbc:derby:" + this.getDestination() + "/" + this.getName() + ";" + "create=true");
             disconnect();
