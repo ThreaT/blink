@@ -44,8 +44,6 @@ import org.apache.commons.lang3.StringUtils;
  * parameters)</li>
  * <li>public final void addTransaction(final String preparedSql)</li>
  * <li>public final void executeAll()</li>
- * <li>public final Object recordToObject(Record record)</li>
- * <li>public final List&gt;Object&lt; recordsToObjects(final List&gt;Record&lt; records, List&gt;Object&lt; objects)</li>
  * </ul>
  *
  * <h3>Create</h3>
@@ -101,7 +99,18 @@ public final class Database {
 
     public Database(final String name, final String destination, final Class... tables) {
         this.name = name.toLowerCase();
-        this.destination = destination;
+
+        //Make sure destination has ending / if not blank
+        String temp;
+        if ((destination == null) || ("".equals(destination)) || (destination.isEmpty())) {
+            temp = destination;
+        } else if (destination.charAt(destination.length()) != '/') {
+            temp = destination + "/";
+        } else {
+            temp = destination;
+        }
+
+        this.destination = temp;
         this.tables = new ArrayList<>();
         this.transactions = new HashMap<>();
 
@@ -146,7 +155,7 @@ public final class Database {
 
     public final synchronized void connect() throws ClassNotFoundException, SQLException {
         Class.forName("org.apache.derby.jdbc.EmbeddedDriver");
-        connection = DriverManager.getConnection("jdbc:derby:" + this.destination + "/" + this.name);
+        connection = DriverManager.getConnection("jdbc:derby:" + new File(this.destination + this.name).getAbsolutePath());
     }
 
     public final synchronized void disconnect() throws SQLException {
@@ -364,25 +373,6 @@ public final class Database {
         disconnect();
     }
 
-    public final Object recordToObject(final Record record, Object object) throws IllegalAccessException, IllegalArgumentException {
-        List<Field> fields = Reflections.classToFieldsList(object.getClass());
-        for (Cell cell : record.getCells()) {
-            for (Field field : fields) {
-                if (field.getName().equalsIgnoreCase(cell.getColumn().getName())) {
-                    field.set(object, cell.getObject());
-                }
-            }
-        }
-        return null;
-    }
-
-    public final List<Object> recordsToObjects(final List<Record> records, List<Object> objects) throws IllegalAccessException, IllegalArgumentException {
-        for (int i = 0; i < records.size(); i++) {
-            objects.set(i, recordToObject(records.get(i), objects.get(i)));
-        }
-        return objects;
-    }
-
     public final void createRecord(final Object object) throws IllegalAccessException, IllegalArgumentException, ClassNotFoundException, SQLException {
         //Get parameters
         List<Parameter> parameters = new ArrayList<>();
@@ -494,7 +484,7 @@ public final class Database {
         if (databaseExists()) {
             Logger.getLogger(Database.class.getName()).log(Logs.Priority.HIGH, "Database already exists in {0}/{1}, this database will be used.", new Object[]{new File(this.getDestination()).getAbsolutePath(), this.getName()});
         } else {
-            this.connection = DriverManager.getConnection("jdbc:derby:" + this.getDestination() + "/" + this.getName() + ";" + "create=true");
+            this.connection = DriverManager.getConnection("jdbc:derby:" + this.getDestination() + this.getName() + ";" + "create=true");
             disconnect();
             if (databaseExists()) {
                 Logger.getLogger(Database.class.getName()).log(Logs.Priority.MEDIUM, "Database created in {0}/{1}", new Object[]{this.getDestination(), this.getName()});
@@ -622,15 +612,19 @@ public final class Database {
     public final Boolean tableExists(final Table table) throws SQLException, ClassNotFoundException {
         connect();
         DatabaseMetaData databaseMetaData = this.connection.getMetaData();
-        ResultSet resultSet = databaseMetaData.getTables(null, null, table.getName().toUpperCase(), null);
-        Boolean exists = resultSet.next();
+        ResultSet resultSet = databaseMetaData.getTables(null, null, "%", null);
+        while (resultSet.next()) {
+            if (resultSet.getString("TABLE_NAME").equalsIgnoreCase(table.getName())) {
+                return true;
+            }
+        }
         disconnect();
-        return exists;
+        return false;
     }
 
     public final Boolean databaseExists() {
-        File databaseFile = new File(this.getDestination() + "/" + this.getName());
-        return databaseFile.exists();
+        File databaseFolder = new File(this.getDestination() + this.getName());
+        return databaseFolder.exists();
     }
 
     public final void deleteTable(final Class clazz) throws ClassNotFoundException, SQLException {
@@ -643,9 +637,9 @@ public final class Database {
 
     public final void deleteDatabase() throws IOException, SQLException {
         disconnect();
-        File databaseLog = new File(this.destination + "/" + "derby.log");
+        File databaseLog = new File(this.destination + "derby.log");
         databaseLog.delete();
-        File database = new File(this.destination + "/" + this.name);
+        File database = new File(this.destination + this.name);
         FileUtils.deleteDirectory(database);
     }
 }
