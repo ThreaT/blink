@@ -10,6 +10,7 @@ import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Scenario;
 import cool.blink.back.core.Url;
 import cool.blink.back.database.Parameter;
+import cool.blink.back.database.PreparedEntry;
 import cool.blink.back.database.Record;
 import cool.blink.back.exception.DuplicateNodeIdException;
 import cool.blink.back.session.Session;
@@ -333,7 +334,7 @@ public class Cluster {
                             if ((process != null) && (process.getProcessType().equals(ProcessType.TotalActionsRequest))) {
                                 try {
                                     Node node = process.getNode();
-                                    List<Record> nodeActions = Blink.getDatabase().readRecords(Action.class, "SELECT * FROM ACTION WHERE nodeId = ?", new Parameter(1, node.getId(), Long.class));
+                                    List<Record> nodeActions = Blink.getDatabase().readRecords(Action.class, new PreparedEntry("SELECT * FROM ACTION WHERE nodeId = ?", new Parameter(1, node.getId(), Long.class)));
                                     Integer totalMissingActions = (Integer) process.getObject() - nodeActions.size();
                                     objectOutputStream.writeObject(new Process(totalMissingActions, Blink.getNode(), ProcessType.TotalActionsResponse));
                                 } catch (IOException ex) {
@@ -342,9 +343,9 @@ public class Cluster {
                             }
                             if ((process != null) && (process.getProcessType().equals(ProcessType.MissingActionRecordRequest))) {
                                 Action action = (Action) process.getObject();
-                                Boolean hasAction = (!(Blink.getDatabase().readRecords(Action.class, "SELECT * FROM action WHERE ms = " + action.getMs() + " AND nodeId = " + action.getNodeId() + " LIMIT 1")).isEmpty());
+                                Boolean hasAction = (!(Blink.getDatabase().readRecords(Action.class, new PreparedEntry("SELECT * FROM action WHERE ms = " + action.getMs() + " AND nodeId = " + action.getNodeId() + " LIMIT 1"))).isEmpty());
                                 if (!hasAction) {
-                                    Blink.getDatabase().execute("INSERT INTO action (ms, nodeId, forwardStatement, rollbackStatement, timeOfExecution) VALUES (" + action.getMs() + "," + action.getNodeId() + "," + action.getForwardStatement() + "," + action.getRollbackStatement() + "," + action.getTimeOfExecution() + ");");
+                                    Blink.getDatabase().execute(new PreparedEntry("INSERT INTO action (ms, nodeId, forwardStatement, rollbackStatement, timeOfExecution) VALUES (" + action.getMs() + "," + action.getNodeId() + "," + action.getForwardStatement() + "," + action.getRollbackStatement() + "," + action.getTimeOfExecution() + ");"));
                                 }
                             }
                             if ((process != null) && (process.getProcessType().equals(ProcessType.SessionUpdateRequest))) {
@@ -574,7 +575,7 @@ public class Cluster {
         public final Integer totalActionsRequest(final Node node) {
             Integer totalActions = 0;
             try {
-                totalActions = Blink.getDatabase().readRecords(Action.class, "SELECT * FROM ACTION WHERE nodeId = ?", new Parameter(1, Blink.getNode().getId(), Blink.getNode().getId().getClass())).size();
+                totalActions = Blink.getDatabase().readRecords(Action.class, new PreparedEntry("SELECT * FROM ACTION WHERE nodeId = ?", new Parameter(1, Blink.getNode().getId(), Blink.getNode().getId().getClass()))).size();
             } catch (ClassNotFoundException | SQLException ex) {
                 Logger.getLogger(Cluster.class.getName()).log(Priority.HIGHEST, null, ex);
             }
@@ -649,7 +650,7 @@ public class Cluster {
             ObjectOutputStream objectOutputStream = null;
             ObjectInputStream objectInputStream = null;
             try {
-                nextSentAction = Action.recordToAction(Blink.getDatabase().readRecords(Action.class, sql).get(0));
+                nextSentAction = Action.recordToAction(Blink.getDatabase().readRecords(Action.class, new PreparedEntry(sql)).get(0));
                 socket = new Socket(node.getAddress(), node.getPort());
                 socket.setSoTimeout(Blink.getCluster().getTimeoutInMillis());
                 objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
@@ -726,7 +727,7 @@ public class Cluster {
                 install();
             } else {
                 try {
-                    List<Action> nonExecutedActions = Action.recordsToActions(Blink.getDatabase().readRecords(Action.class, "SELECT * FROM action WHERE ms < " + (System.currentTimeMillis() - 15000)));
+                    List<Action> nonExecutedActions = Action.recordsToActions(Blink.getDatabase().readRecords(Action.class, new PreparedEntry("SELECT * FROM action WHERE ms < " + (System.currentTimeMillis() - 15000))));
                     for (Action action : nonExecutedActions) {
                         Blink.getDatabase().unsafeExecute(action.getForwardStatement());
                         Blink.getDatabase().unsafeExecute("UPDATE action SET timeOfExecution = " + System.currentTimeMillis() + " WHERE ms = " + action.getMs() + " AND nodeId = " + action.getNodeId());
@@ -749,10 +750,10 @@ public class Cluster {
          */
         public Boolean gapsExist() {
             try {
-                List<Action> nonExecutedActions = Action.recordsToActions(Blink.getDatabase().readRecords(Action.class, "SELECT * FROM action WHERE timeOfExecution = null OR timeOfExecution = ''"));
+                List<Action> nonExecutedActions = Action.recordsToActions(Blink.getDatabase().readRecords(Action.class, new PreparedEntry("SELECT * FROM action WHERE timeOfExecution = null OR timeOfExecution = ''")));
                 for (Action action : nonExecutedActions) {
-                    List<Action> actionsBefore = Action.recordsToActions(Blink.getDatabase().readRecords(Action.class, "SELECT * FROM action WHERE ms < " + action.getMs()));
-                    List<Action> actionsAfter = Action.recordsToActions(Blink.getDatabase().readRecords(Action.class, "SELECT * FROM action WHERE ms > " + action.getMs()));
+                    List<Action> actionsBefore = Action.recordsToActions(Blink.getDatabase().readRecords(Action.class, new PreparedEntry("SELECT * FROM action WHERE ms < " + action.getMs())));
+                    List<Action> actionsAfter = Action.recordsToActions(Blink.getDatabase().readRecords(Action.class, new PreparedEntry("SELECT * FROM action WHERE ms > " + action.getMs())));
                     if ((!actionsBefore.isEmpty()) && (!actionsAfter.isEmpty())) {
                         return true;
                     }
@@ -774,9 +775,9 @@ public class Cluster {
          */
         public void rollback() {
             try {
-                Action lastExecutedAction = Action.recordToAction((Blink.getDatabase().readRecords(Action.class, "SELECT * FROM action WHERE timeOfExecution NOT NULL AND timeOfExecution <> '' ORDER BY ms DESC LIMIT 1")).get(0));
-                Action oldestNonExecutedAction = Action.recordToAction((Blink.getDatabase().readRecords(Action.class, "SELECT * FROM action WHERE timeOfExecution NOT NULL AND timeOfExecution <> '' ORDER BY ms DESC LIMIT 1")).get(0));
-                List<Action> actionsToRollback = Action.recordsToActions(Blink.getDatabase().readRecords(Action.class, "SELECT * FROM action WHERE ms <= " + lastExecutedAction.getMs() + " AND ms >= " + oldestNonExecutedAction.getMs() + " AND timeOfExecution NOT NULL AND timeOfExecution <> '' ORDER BY ms DESC"));
+                Action lastExecutedAction = Action.recordToAction((Blink.getDatabase().readRecords(Action.class, new PreparedEntry("SELECT * FROM action WHERE timeOfExecution NOT NULL AND timeOfExecution <> '' ORDER BY ms DESC LIMIT 1"))).get(0));
+                Action oldestNonExecutedAction = Action.recordToAction((Blink.getDatabase().readRecords(Action.class, new PreparedEntry("SELECT * FROM action WHERE timeOfExecution NOT NULL AND timeOfExecution <> '' ORDER BY ms DESC LIMIT 1"))).get(0));
+                List<Action> actionsToRollback = Action.recordsToActions(Blink.getDatabase().readRecords(Action.class, new PreparedEntry("SELECT * FROM action WHERE ms <= " + lastExecutedAction.getMs() + " AND ms >= " + oldestNonExecutedAction.getMs() + " AND timeOfExecution NOT NULL AND timeOfExecution <> '' ORDER BY ms DESC")));
                 for (Action action : actionsToRollback) {
                     Blink.getDatabase().unsafeExecute(action.getRollbackStatement());
                     Blink.getDatabase().unsafeExecute("UPDATE action SET timeOfExecution = NULL WHERE ms = " + action.getMs() + " AND nodeId = " + action.getNodeId());
@@ -795,8 +796,8 @@ public class Cluster {
          */
         public void install() {
             try {
-                Action lastExecutedAction = Action.recordToAction((Blink.getDatabase().readRecords(Action.class, "SELECT * FROM action WHERE timeOfExecution NOT NULL AND timeOfExecution <> '' ORDER BY ms DESC LIMIT 1")).get(0));
-                List<Action> actionsToExecute = Action.recordsToActions(Blink.getDatabase().readRecords(Action.class, "SELECT * FROM action WHERE ms < " + lastExecutedAction.getMs() + " ORDER BY ms ASC"));
+                Action lastExecutedAction = Action.recordToAction((Blink.getDatabase().readRecords(Action.class, new PreparedEntry("SELECT * FROM action WHERE timeOfExecution NOT NULL AND timeOfExecution <> '' ORDER BY ms DESC LIMIT 1"))).get(0));
+                List<Action> actionsToExecute = Action.recordsToActions(Blink.getDatabase().readRecords(Action.class, new PreparedEntry("SELECT * FROM action WHERE ms < " + lastExecutedAction.getMs() + " ORDER BY ms ASC")));
                 for (Action action : actionsToExecute) {
                     Blink.getDatabase().unsafeExecute(action.getForwardStatement());
                     Blink.getDatabase().unsafeExecute("UPDATE action SET timeOfExecution = " + System.currentTimeMillis() + " WHERE ms = " + action.getMs() + " AND nodeId = " + action.getNodeId());

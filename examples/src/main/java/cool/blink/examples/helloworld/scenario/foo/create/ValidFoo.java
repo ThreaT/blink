@@ -9,6 +9,7 @@ import cool.blink.back.core.Response;
 import cool.blink.back.core.Response.Status;
 import cool.blink.back.core.Url;
 import cool.blink.back.database.Parameter;
+import cool.blink.back.database.PreparedEntry;
 import cool.blink.back.database.Record;
 import cool.blink.back.utilities.Logs.Priority;
 import cool.blink.examples.helloworld.table.Foo;
@@ -87,7 +88,7 @@ public class ValidFoo extends Scenario {
             Long end = System.currentTimeMillis();
             Foo foo = new Foo();
             foo.setName(request.getParameters().get("name"));
-            List<Record> fooRecords = Blink.getDatabase().readRecords(foo.getClass(), "SELECT * FROM FOO WHERE id = ?", new Parameter(1, foo.getId(), Long.class));
+            List<Record> fooRecords = Blink.getDatabase().readRecords(foo.getClass(), new PreparedEntry("SELECT * FROM FOO WHERE id = ?", new Parameter(1, foo.getId(), Long.class)));
             if (fooRecords.isEmpty()) {
                 report.setSuccessful(report.getSuccessful() - 1);
                 report.appendLog(new String[][]{{"" + Thread.currentThread().getStackTrace()[1].getLineNumber(), "Foo was not persisted to the database for some reason."}});

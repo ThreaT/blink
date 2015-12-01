@@ -21,9 +21,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.beanutils.PropertyUtils;
@@ -96,7 +94,7 @@ public final class Database {
     private final String name;
     private final String destination;
     private final List<Class> tables;
-    private final Map<String, List<Parameter>> transactions;
+    private final List<PreparedEntry> transactions;
     private Connection connection;
 
     public Database(final String name, final String destination, final Class... tables) {
@@ -114,7 +112,7 @@ public final class Database {
 
         this.destination = temp;
         this.tables = new ArrayList<>();
-        this.transactions = new HashMap<>();
+        this.transactions = new ArrayList<>();
 
         //Add all provided tables
         this.tables.addAll(Arrays.asList(tables));
@@ -146,7 +144,7 @@ public final class Database {
         return tables;
     }
 
-    public Map<String, List<Parameter>> getTransactions() {
+    public final List<PreparedEntry> getTransactions() {
         return transactions;
     }
 
@@ -304,14 +302,14 @@ public final class Database {
         disconnect();
     }
 
-    public final void execute(final String preparedSql, final Parameter... parameters) throws ClassNotFoundException, SQLException {
-        Integer totalPlaceholders = StringUtils.countMatches(preparedSql, "?");
-        if (totalPlaceholders != Arrays.asList(parameters).size()) {
+    public final void execute(final PreparedEntry preparedEntry) throws ClassNotFoundException, SQLException {
+        Integer totalPlaceholders = StringUtils.countMatches(preparedEntry.getSql(), "?");
+        if (totalPlaceholders != Arrays.asList(preparedEntry.getParameters()).size()) {
             throw new SQLDataException("Incorrect number of parameters allocated for provided sql statement");
         }
         connect();
-        PreparedStatement preparedStatement = this.connection.prepareStatement(preparedSql);
-        for (Parameter parameter : parameters) {
+        PreparedStatement preparedStatement = this.connection.prepareStatement(preparedEntry.getSql());
+        for (Parameter parameter : preparedEntry.getParameters()) {
             switch (parameter.getType().getSimpleName().toLowerCase()) {
                 case "string":
                     preparedStatement.setString(parameter.getPlaceholderIndex(), (String) parameter.getValue());
@@ -335,17 +333,17 @@ public final class Database {
         disconnect();
     }
 
-    public final void addTransaction(final String preparedSql, final Parameter... parameters) {
-        this.transactions.put(preparedSql, Arrays.asList(parameters));
+    public final void addTransaction(final PreparedEntry preparedEntry) {
+        this.transactions.add(preparedEntry);
     }
 
     public final void executeAll() throws ClassNotFoundException, SQLException {
         PreparedStatement preparedStatement = null;
-        for (Map.Entry<String, List<Parameter>> entry : this.transactions.entrySet()) {
-            String preparedSql = entry.getKey();
-            List<Parameter> parameters = entry.getValue();
+        for (PreparedEntry preparedEntry : this.transactions) {
+            String preparedSql = preparedEntry.getSql();
+            List<Parameter> parameters = preparedEntry.getParameters();
             Integer totalPlaceholders = StringUtils.countMatches(preparedSql, "?");
-            if (totalPlaceholders != Arrays.asList(parameters).size()) {
+            if (totalPlaceholders != parameters.size()) {
                 throw new SQLDataException("Incorrect number of parameters allocated for provided sql statement");
             }
             connect();
@@ -369,6 +367,7 @@ public final class Database {
                         break;
                 }
             }
+            //TODO: This only adds one statement for some reason
             preparedStatement.addBatch();
         }
         if (preparedStatement != null) {
@@ -502,7 +501,7 @@ public final class Database {
                 }
             }
             createStatement += ")";
-            execute(createStatement);
+            execute(new PreparedEntry(createStatement));
             if (tableExists(table)) {
                 Logger.getLogger(Database.class.getName()).log(Priority.MEDIUM, "{0} table has been created.", clazz.getSimpleName());
             } else {
@@ -526,17 +525,17 @@ public final class Database {
     }
 
     //TODO: Remove final Class clazz
-    public final List<Record> readRecords(final Class clazz, final String preparedSql, final Parameter... parameters) throws ClassNotFoundException, SQLException {
+    public final List<Record> readRecords(final Class clazz, final PreparedEntry preparedEntry) throws ClassNotFoundException, SQLException {
         Table table = new Table(clazz.getSimpleName());
-        Integer totalPlaceholders = StringUtils.countMatches(preparedSql, "?");
-        if (totalPlaceholders != Arrays.asList(parameters).size()) {
+        Integer totalPlaceholders = StringUtils.countMatches(preparedEntry.getSql(), "?");
+        if (totalPlaceholders != preparedEntry.getParameters().size()) {
             throw new SQLDataException("Incorrect number of parameters allocated for provided sql statement");
         }
         connect();
 
         //Assign parameters to preparedSql
-        PreparedStatement preparedStatement = this.connection.prepareStatement(preparedSql);
-        for (Parameter parameter : parameters) {
+        PreparedStatement preparedStatement = this.connection.prepareStatement(preparedEntry.getSql());
+        for (Parameter parameter : preparedEntry.getParameters()) {
             switch (parameter.getType().getSimpleName().toLowerCase()) {
                 case "string":
                     preparedStatement.setString(parameter.getPlaceholderIndex(), (String) parameter.getValue());
@@ -642,7 +641,7 @@ public final class Database {
                                 tableColumns.add(column);
                             }
                         }
-                        List<Record> tableRecords = this.readRecords(clazz, "SELECT * FROM " + table.getName());
+                        List<Record> tableRecords = this.readRecords(clazz, new PreparedEntry("SELECT * FROM " + table.getName()));
                         String tableCatalog = tableResultSet.getString("TABLE_CAT");
                         String tableSchema = tableResultSet.getString("TABLE_SCHEM");
                         String tableName = tableResultSet.getString("TABLE_NAME");
