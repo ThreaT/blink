@@ -2,8 +2,8 @@ package cool.blink.back.database;
 
 public final class ColumnDefaults {
 
-    public static final Boolean getDefaultNotNull() {
-        return false;
+    public static final Boolean getDefaultNotNull(Boolean isPrimaryKey) {
+        return isPrimaryKey;
     }
 
     public static final Boolean getDefaultPrimaryKey(String fieldName) {

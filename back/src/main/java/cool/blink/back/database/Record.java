@@ -19,12 +19,17 @@ public final class Record {
         this.cells = Arrays.asList(cells);
     }
 
-    public Table getTable() {
+    public final Table getTable() {
         return table;
     }
 
-    public List<Cell> getCells() {
+    public final List<Cell> getCells() {
         return cells;
+    }
+
+    @Override
+    public final String toString() {
+        return "Record{" + "table=" + table + ", cells=" + cells + '}';
     }
 
 }

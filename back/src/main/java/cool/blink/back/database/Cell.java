@@ -36,4 +36,9 @@ public final class Cell {
         this.object = object;
     }
 
+    @Override
+    public final String toString() {
+        return "Cell{" + "record=" + record + ", column=" + column + ", object=" + object + '}';
+    }
+
 }

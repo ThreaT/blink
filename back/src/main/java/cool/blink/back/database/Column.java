@@ -44,4 +44,9 @@ public final class Column {
         return table;
     }
 
+    @Override
+    public final String toString() {
+        return "Column{" + "name=" + name + ", sqlDataType=" + sqlDataType + ", length=" + length + ", primaryKey=" + primaryKey + ", notNull=" + notNull + ", table=" + table + '}';
+    }
+
 }

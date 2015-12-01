@@ -22,6 +22,7 @@ import cool.blink.front.html.element.Html;
 import cool.blink.front.html.element.Meta;
 import cool.blink.front.html.element.Title;
 import cool.blink.front.html.property.value.HttpEquivValue;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.logging.Level;
@@ -60,6 +61,8 @@ public class ValidFoo extends Scenario {
             Blink.getWebServer().respond(request, new ValidFooTemplate(foo).getResponse());
         } catch (SQLException | ClassNotFoundException | IllegalAccessException | IllegalArgumentException ex) {
             Logger.getLogger(ValidFoo.class.getName()).log(Priority.HIGHEST, null, ex);
+        } catch (InvocationTargetException | NoSuchMethodException ex) {
+            Logger.getLogger(ValidFoo.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 

@@ -7,6 +7,7 @@ import cool.blink.back.utilities.Reflections;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -113,6 +115,9 @@ public final class Database {
         this.destination = temp;
         this.tables = new ArrayList<>();
         this.transactions = new HashMap<>();
+
+        //Add all provided tables
+        this.tables.addAll(Arrays.asList(tables));
 
         //Add action table
         this.tables.add(Action.class);
@@ -373,22 +378,38 @@ public final class Database {
         disconnect();
     }
 
-    public final void createRecord(final Object object) throws IllegalAccessException, IllegalArgumentException, ClassNotFoundException, SQLException {
+    public final void createRecord(final Object object) throws ClassNotFoundException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SQLException {
         //Get parameters
         List<Parameter> parameters = new ArrayList<>();
         List<Field> fields = Reflections.classToFieldsList(object.getClass());
-        for (int i = 0; i < fields.size(); i++) {
-            Integer placeholderIndex = i;
-            Object value = fields.get(i).get(new Object());
-            Class type = value.getClass();
-            Parameter parameter = new Parameter(placeholderIndex, value, type);
-            parameters.add(parameter);
+        for (int i = 1; i < fields.size() + 1; i++) {
+            if (!fields.get(i - 1).getName().equalsIgnoreCase("id")) {
+                Integer placeholderIndex = parameters.size() + 1;
+                Object value = PropertyUtils.getProperty(object, fields.get(i - 1).getName());
+                Class type = fields.get(i - 1).getType();
+                Parameter parameter = new Parameter(placeholderIndex, value, type);
+                parameters.add(parameter);
+            }
         }
 
-        //Get preparedSql
-        String preparedSql = "INSERT INTO " + object.getClass().getSimpleName().toUpperCase() + " VALUES(";
-        for (int i = 0; i < parameters.size(); i++) {
-            if (i + 1 < parameters.size()) {
+        //Set column names
+        Integer totalCols = 0;
+        String preparedSql = "INSERT INTO " + object.getClass().getSimpleName().toUpperCase() + "(";
+        for (int i = 1; i < fields.size() + 1; i++) {
+            if (!fields.get(i - 1).getName().equalsIgnoreCase("id")) {
+                preparedSql += fields.get(i - 1).getName();
+                totalCols++;
+                if (fields.size() > i) {
+                    preparedSql += ",";
+                }
+            }
+        }
+        preparedSql += ")";
+
+        //Set column values
+        preparedSql += " " + "VALUES(";
+        for (int i = 0; i < totalCols; i++) {
+            if (i + 1 < totalCols) {
                 preparedSql += "?,";
             } else {
                 preparedSql += "?)";
@@ -398,13 +419,19 @@ public final class Database {
         //Execute preparedSql
         connect();
         PreparedStatement preparedStatement = this.connection.prepareStatement(preparedSql);
+
+        //Assign parameters to prepared statement
         for (Parameter parameter : parameters) {
             switch (parameter.getType().getSimpleName().toLowerCase()) {
                 case "string":
                     preparedStatement.setString(parameter.getPlaceholderIndex(), (String) parameter.getValue());
                     break;
                 case "integer":
-                    preparedStatement.setInt(parameter.getPlaceholderIndex(), (Integer) parameter.getValue());
+                    if ((Integer) parameter.getValue() == null) {
+                        //Do nothing - this will cause a primary key to auto-increment in most cases or reflect a null in all the others
+                    } else {
+                        preparedStatement.setInt(parameter.getPlaceholderIndex(), (Integer) parameter.getValue());
+                    }
                     break;
                 case "date":
                     preparedStatement.setDate(parameter.getPlaceholderIndex(), (Date) parameter.getValue());
@@ -434,10 +461,13 @@ public final class Database {
             SqlDataType sqlDataType = sqlDataMapper(field.getType());
             Integer length = null;
             if (sqlDataType.equals(SqlDataType.VARCHAR)) {
+                //30 varchar length by default
                 length = ColumnDefaults.getDefaultVarcharLength();
             }
+            //Primary Key by default if the field name is "id"
             Boolean primaryKey = ColumnDefaults.getDefaultPrimaryKey(field.getName());
-            Boolean notNull = ColumnDefaults.getDefaultNotNull();
+            //Nullable by default when not a primary key
+            Boolean notNull = ColumnDefaults.getDefaultNotNull(primaryKey);
             column = new Column(columnName, sqlDataType, length, primaryKey, notNull, table);
             columns.add(column);
         }
@@ -461,6 +491,7 @@ public final class Database {
                 createStatement += (table.getColumns().get(i).getNotNull() == true ? " " + "NOT NULL" : "");
                 if (table.getColumns().get(i).getPrimaryKey() == true) {
                     primaryKey = table.getColumns().get(i);
+                    createStatement += " " + "GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1)";
                 }
                 if (i == table.getColumns().size() - 1) {
                     if (primaryKey != null) {
@@ -494,6 +525,7 @@ public final class Database {
         }
     }
 
+    //TODO: Remove final Class clazz
     public final List<Record> readRecords(final Class clazz, final String preparedSql, final Parameter... parameters) throws ClassNotFoundException, SQLException {
         Table table = new Table(clazz.getSimpleName());
         Integer totalPlaceholders = StringUtils.countMatches(preparedSql, "?");
@@ -526,7 +558,13 @@ public final class Database {
                 String columnName = columnResultSet.getString("COLUMN_NAME");
                 SqlDataType sqlDataType = sqlDataTypeMapper((columnResultSet.getString("TYPE_NAME")));
                 Integer columnLength = columnResultSet.getInt("COLUMN_SIZE");
-                Boolean columnPrimaryKey = columnResultSet.getString("PKCOLUMN_NAME").equalsIgnoreCase(columnName);
+                Boolean columnPrimaryKey = false;
+                ResultSet columnPrimaryKeysSet = columnMeta.getPrimaryKeys(null, null, clazz.getSimpleName());
+                while (columnPrimaryKeysSet.next()) {
+                    if (columnPrimaryKeysSet.getString(4).equalsIgnoreCase(columnName)) {
+                        columnPrimaryKey = true;
+                    }
+                }
                 Boolean columnNotNull = columnResultSet.getString("NULLABLE").equals("0");
                 column = new Column(columnName, sqlDataType, columnLength, columnPrimaryKey, columnNotNull, table);
             }
@@ -537,18 +575,17 @@ public final class Database {
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
         List<Cell> cells = new ArrayList<>();
         while (resultSet.next()) {
-
             //Get object data
             for (int i = 0; i < resultSetMetaData.getColumnCount(); i++) {
-                Object object = new Object();
-                if (cells.get(i).getObject() instanceof String) {
-                    object = resultSet.getString(cells.get(i).getColumn().getName());
-                } else if (cells.get(i).getObject() instanceof Integer) {
-                    object = resultSet.getInt(cells.get(i).getColumn().getName());
-                } else if (cells.get(i).getObject() instanceof Object) {
-                    object = resultSet.getBlob(cells.get(i).getColumn().getName());
-                } else if (cells.get(i).getObject() instanceof Date) {
-                    object = resultSet.getDate(cells.get(i).getColumn().getName());
+                Object object;
+                if (resultSet.getObject(i) instanceof String) {
+                    object = resultSet.getString(i);
+                } else if (resultSet.getObject(i) instanceof Integer) {
+                    object = resultSet.getInt(i);
+                } else if (resultSet.getObject(i) instanceof Date) {
+                    object = resultSet.getDate(i);
+                } else {
+                    object = resultSet.getBlob(i);
                 }
                 cells.add(new Cell(null, column, object));
             }
@@ -582,12 +619,19 @@ public final class Database {
                     if (tableResultSet.getString("TABLE_NAME").equalsIgnoreCase(table.getName())) {
                         List<Column> tableColumns = new ArrayList<>();
                         DatabaseMetaData columnMeta = this.connection.getMetaData();
+                        ResultSet columnPrimaryKeysSet;
                         try (ResultSet columnResultSet = columnMeta.getColumns(null, null, table.getName(), null)) {
                             while (columnResultSet.next()) {
                                 String columnName = columnResultSet.getString("COLUMN_NAME");
                                 SqlDataType sqlDataType = sqlDataTypeMapper((columnResultSet.getString("TYPE_NAME")));
                                 Integer columnLength = columnResultSet.getInt("COLUMN_SIZE");
-                                Boolean columnPrimaryKey = columnResultSet.getString("PKCOLUMN_NAME").equalsIgnoreCase(columnName);
+                                Boolean columnPrimaryKey = false;
+                                columnPrimaryKeysSet = columnMeta.getPrimaryKeys(null, null, table.getName());
+                                while (columnPrimaryKeysSet.next()) {
+                                    if (columnPrimaryKeysSet.getString(4).equalsIgnoreCase(columnName)) {
+                                        columnPrimaryKey = true;
+                                    }
+                                }
                                 Boolean columnNotNull = columnResultSet.getString("NULLABLE").equals("0");
                                 Column column = new Column(columnName, sqlDataType, columnLength, columnPrimaryKey, columnNotNull, table);
                                 tableColumns.add(column);
@@ -630,8 +674,13 @@ public final class Database {
     public final void deleteTable(final Class clazz) throws ClassNotFoundException, SQLException {
         connect();
         Statement statement = this.connection.createStatement();
-        String deleteStatement = "DROP TABLE " + clazz.getSimpleName().toUpperCase() + ";";
+        String deleteStatement = "DROP TABLE " + clazz.getSimpleName().toUpperCase();
         statement.executeUpdate(deleteStatement);
+        if (!tableExists(new Table(clazz.getSimpleName()))) {
+            Logger.getLogger(Database.class.getName()).log(Priority.MEDIUM, "{0} was deleted.", clazz.getSimpleName());
+        } else {
+            Logger.getLogger(Database.class.getName()).log(Priority.HIGH, "{0} could not be deleted.", clazz.getSimpleName());
+        }
         disconnect();
     }
 
