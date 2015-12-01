@@ -34,14 +34,4 @@ public class Test {
  * </ul>
  *
  *
- *
- * <h3>Read</h3>
- * <br/>
- * <ul>
- * <li>public final List&gt;Record&lt; readRecords(final Class clazz, final
- * String whereClause)</li>
- *
- *
- * </ul>
- *
  */

@@ -28,8 +28,8 @@ public final class Record {
     }
 
     @Override
-    public final String toString() {
-        return "Record{" + "table=" + table + ", cells=" + cells + '}';
+    public String toString() {
+        return "Record{" + "cells=" + cells + '}';
     }
 
 }

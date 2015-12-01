@@ -45,8 +45,8 @@ public final class Column {
     }
 
     @Override
-    public final String toString() {
-        return "Column{" + "name=" + name + ", sqlDataType=" + sqlDataType + ", length=" + length + ", primaryKey=" + primaryKey + ", notNull=" + notNull + ", table=" + table + '}';
+    public String toString() {
+        return "Column{" + "name=" + name + ", sqlDataType=" + sqlDataType + ", length=" + length + ", primaryKey=" + primaryKey + ", notNull=" + notNull + '}';
     }
 
 }

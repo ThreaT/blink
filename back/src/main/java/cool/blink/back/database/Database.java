@@ -533,6 +533,8 @@ public final class Database {
             throw new SQLDataException("Incorrect number of parameters allocated for provided sql statement");
         }
         connect();
+
+        //Assign parameters to preparedSql
         PreparedStatement preparedStatement = this.connection.prepareStatement(preparedSql);
         for (Parameter parameter : parameters) {
             switch (parameter.getType().getSimpleName().toLowerCase()) {
@@ -578,14 +580,16 @@ public final class Database {
             //Get object data
             for (int i = 0; i < resultSetMetaData.getColumnCount(); i++) {
                 Object object;
-                if (resultSet.getObject(i) instanceof String) {
-                    object = resultSet.getString(i);
-                } else if (resultSet.getObject(i) instanceof Integer) {
-                    object = resultSet.getInt(i);
-                } else if (resultSet.getObject(i) instanceof Date) {
-                    object = resultSet.getDate(i);
+                if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) == null) {
+                    object = null;
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof String) {
+                    object = resultSet.getString(resultSetMetaData.getColumnName(i + 1));
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof Integer) {
+                    object = resultSet.getInt(resultSetMetaData.getColumnName(i + 1));
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof Date) {
+                    object = resultSet.getDate(resultSetMetaData.getColumnName(i + 1));
                 } else {
-                    object = resultSet.getBlob(i);
+                    object = resultSet.getBlob(resultSetMetaData.getColumnName(i + 1));
                 }
                 cells.add(new Cell(null, column, object));
             }
@@ -600,6 +604,7 @@ public final class Database {
             }
             record.getCells().add(cells.get(i));
             cells.get(i).setRecord(record);
+            records.add(record);
         }
 
         preparedStatement.closeOnCompletion();
