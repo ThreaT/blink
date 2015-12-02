@@ -9,7 +9,15 @@ public final class Column {
     private final Integer length;
     private final Boolean primaryKey;
     private final Boolean notNull;
-    private final Table table;
+    private Table table;
+
+    public Column(final String name, final SqlDataType sqlDataType, final Integer length, final Boolean primaryKey, final Boolean notNull) {
+        this.name = name;
+        this.sqlDataType = sqlDataType;
+        this.length = length;
+        this.primaryKey = primaryKey;
+        this.notNull = notNull;
+    }
 
     public Column(final String name, final SqlDataType sqlDataType, final Integer length, final Boolean primaryKey, final Boolean notNull, final Table table) {
         this.name = name.toLowerCase();
@@ -44,8 +52,12 @@ public final class Column {
         return table;
     }
 
+    public final void setTable(final Table table) {
+        this.table = table;
+    }
+
     @Override
-    public String toString() {
+    public final String toString() {
         return "Column{" + "name=" + name + ", sqlDataType=" + sqlDataType + ", length=" + length + ", primaryKey=" + primaryKey + ", notNull=" + notNull + '}';
     }
 

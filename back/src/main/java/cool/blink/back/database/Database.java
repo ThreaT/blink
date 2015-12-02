@@ -22,7 +22,6 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.io.FileUtils;
@@ -42,8 +41,9 @@ import org.apache.commons.lang3.StringUtils;
  * <li>public final void unsafeExecute(final String sql)</li>
  * <li>public final void execute(final String preparedSql, final Parameter...
  * parameters)</li>
- * <li>public final void addTransaction(final String preparedSql)</li>
- * <li>public final void executeAll()</li>
+ * <li>public final synchronized void addUnsafeTransaction(final String
+ * query)</li>
+ * <li>public final synchronized void executeUnsafeBatch()</li>
  * </ul>
  *
  * <h3>Create</h3>
@@ -94,7 +94,7 @@ public final class Database {
     private final String name;
     private final String destination;
     private final List<Class> tables;
-    private final List<PreparedEntry> transactions;
+    private final List<String> transactions;
     private Connection connection;
 
     public Database(final String name, final String destination, final Class... tables) {
@@ -126,9 +126,9 @@ public final class Database {
                 createTable(clazz);
             }
         } catch (SQLException | ClassNotFoundException ex) {
-            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Database.class.getName()).log(Priority.HIGHEST, null, ex);
         } catch (IllegalAccessException | IllegalArgumentException ex) {
-            Logger.getLogger(Database.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Database.class.getName()).log(Priority.HIGHEST, null, ex);
         }
     }
 
@@ -144,7 +144,7 @@ public final class Database {
         return tables;
     }
 
-    public final List<PreparedEntry> getTransactions() {
+    public final List<String> getTransactions() {
         return transactions;
     }
 
@@ -304,7 +304,7 @@ public final class Database {
 
     public final void execute(final PreparedEntry preparedEntry) throws ClassNotFoundException, SQLException {
         Integer totalPlaceholders = StringUtils.countMatches(preparedEntry.getSql(), "?");
-        if (totalPlaceholders != Arrays.asList(preparedEntry.getParameters()).size()) {
+        if (totalPlaceholders != preparedEntry.getParameters().size()) {
             throw new SQLDataException("Incorrect number of parameters allocated for provided sql statement");
         }
         connect();
@@ -333,48 +333,20 @@ public final class Database {
         disconnect();
     }
 
-    public final void addTransaction(final PreparedEntry preparedEntry) {
-        this.transactions.add(preparedEntry);
+    public final synchronized void addUnsafeTransaction(final String query) {
+        this.transactions.add(query);
     }
 
-    public final void executeAll() throws ClassNotFoundException, SQLException {
-        PreparedStatement preparedStatement = null;
-        for (PreparedEntry preparedEntry : this.transactions) {
-            String preparedSql = preparedEntry.getSql();
-            List<Parameter> parameters = preparedEntry.getParameters();
-            Integer totalPlaceholders = StringUtils.countMatches(preparedSql, "?");
-            if (totalPlaceholders != parameters.size()) {
-                throw new SQLDataException("Incorrect number of parameters allocated for provided sql statement");
+    public final synchronized void executeUnsafeBatch() throws ClassNotFoundException, SQLException {
+        try (Connection tempConnection = DriverManager.getConnection("jdbc:derby:" + new File(this.destination + this.name).getAbsolutePath())) {
+            Statement statement = tempConnection.createStatement();
+            tempConnection.setAutoCommit(false);
+            for (String transaction : this.transactions) {
+                statement.addBatch(transaction);
             }
-            connect();
-            preparedStatement = this.connection.prepareStatement(preparedSql);
-            for (Parameter parameter : parameters) {
-                switch (parameter.getType().getSimpleName().toLowerCase()) {
-                    case "string":
-                        preparedStatement.setString(parameter.getPlaceholderIndex(), (String) parameter.getValue());
-                        break;
-                    case "integer":
-                        preparedStatement.setInt(parameter.getPlaceholderIndex(), (Integer) parameter.getValue());
-                        break;
-                    case "date":
-                        preparedStatement.setDate(parameter.getPlaceholderIndex(), (Date) parameter.getValue());
-                        break;
-                    case "long":
-                        preparedStatement.setLong(parameter.getPlaceholderIndex(), (Long) parameter.getValue());
-                        break;
-                    default:
-                        preparedStatement.setBlob(parameter.getPlaceholderIndex(), (Blob) parameter.getValue());
-                        break;
-                }
-            }
-            //TODO: This only adds one statement for some reason
-            preparedStatement.addBatch();
+            statement.executeBatch();
+            tempConnection.commit();
         }
-        if (preparedStatement != null) {
-            preparedStatement.executeBatch();
-            preparedStatement.closeOnCompletion();
-        }
-        disconnect();
     }
 
     public final void createRecord(final Object object) throws ClassNotFoundException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SQLException {
@@ -524,8 +496,89 @@ public final class Database {
         }
     }
 
-    //TODO: Remove final Class clazz
-    public final List<Record> readRecords(final Class clazz, final PreparedEntry preparedEntry) throws ClassNotFoundException, SQLException {
+    public final List<Record> readRecords(final PreparedEntry preparedEntry) throws ClassNotFoundException, SQLException, InterruptedException {
+        Integer totalPlaceholders = StringUtils.countMatches(preparedEntry.getSql(), "?");
+        if (totalPlaceholders != preparedEntry.getParameters().size()) {
+            throw new SQLDataException("Incorrect number of parameters allocated for provided sql statement");
+        }
+        connect();
+
+        //Assign parameters to preparedSql
+        PreparedStatement preparedStatement = this.connection.prepareStatement(preparedEntry.getSql());
+        for (Parameter parameter : preparedEntry.getParameters()) {
+            switch (parameter.getType().getSimpleName().toLowerCase()) {
+                case "string":
+                    preparedStatement.setString(parameter.getPlaceholderIndex(), (String) parameter.getValue());
+                    break;
+                case "integer":
+                    preparedStatement.setInt(parameter.getPlaceholderIndex(), (Integer) parameter.getValue());
+                    break;
+                case "date":
+                    preparedStatement.setDate(parameter.getPlaceholderIndex(), (Date) parameter.getValue());
+                    break;
+                default:
+                    throw new SQLDataException("Invalid parameter type: " + parameter.toString());
+            }
+        }
+
+        //Run query
+        ResultSet resultSet = preparedStatement.executeQuery();
+
+        //Get column data
+        List<Column> columns = new ArrayList<>();
+        ResultSetMetaData columnMeta = resultSet.getMetaData();
+        Integer columnCount = columnMeta.getColumnCount();
+        for (int i = 0; i < columnCount; i++) {
+            String columnName = columnMeta.getColumnName(i + 1);
+            SqlDataType sqlDataType = sqlDataTypeMapper((columnMeta.getColumnTypeName(i + 1)));
+            Integer columnLength = columnMeta.getPrecision(i + 1);
+            Boolean columnPrimaryKey = columnMeta.isAutoIncrement(i + 1);
+            Boolean columnNotNull = columnMeta.isNullable(i + 1) == 0;
+            columns.add(new Column(columnName, sqlDataType, columnLength, columnPrimaryKey, columnNotNull));
+        }
+
+        //Get records data from resultSet
+        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+        List<Cell> cells = new ArrayList<>();
+        while (resultSet.next()) {
+            //Get object data
+            for (int i = 0; i < resultSetMetaData.getColumnCount(); i++) {
+                Object object;
+                if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) == null) {
+                    object = null;
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof String) {
+                    object = resultSet.getString(resultSetMetaData.getColumnName(i + 1));
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof Integer) {
+                    object = resultSet.getInt(resultSetMetaData.getColumnName(i + 1));
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof Date) {
+                    object = resultSet.getDate(resultSetMetaData.getColumnName(i + 1));
+                } else {
+                    object = resultSet.getBlob(resultSetMetaData.getColumnName(i + 1));
+                }
+                cells.add(new Cell(null, (Column) columns.get(i), object));
+            }
+        }
+
+        //Organize record data and assign records to cells and cells to records
+        List<Record> records = new ArrayList<>();
+        Record record = new Record();
+        for (int i = 0; i < cells.size(); i++) {
+            if (i % resultSetMetaData.getColumnCount() == 0) {
+                record = new Record();
+            }
+            record.getCells().add(cells.get(i));
+            cells.get(i).setRecord(record);
+            if (i % resultSetMetaData.getColumnCount() == 0) {
+                records.add(record);
+            }
+        }
+
+        preparedStatement.closeOnCompletion();
+        disconnect();
+        return records;
+    }
+
+    public final List<Record> readRecords(final Class clazz, final PreparedEntry preparedEntry) throws ClassNotFoundException, SQLException, InterruptedException {
         Table table = new Table(clazz.getSimpleName());
         Integer totalPlaceholders = StringUtils.countMatches(preparedEntry.getSql(), "?");
         if (totalPlaceholders != preparedEntry.getParameters().size()) {
@@ -551,28 +604,23 @@ public final class Database {
             }
         }
 
+        //Run query
+        ResultSet resultSet = preparedStatement.executeQuery();
+
         //Get column data
-        Column column = null;
-        DatabaseMetaData columnMeta = this.connection.getMetaData();
-        try (ResultSet columnResultSet = columnMeta.getColumns(null, null, table.getName(), null)) {
-            while (columnResultSet.next()) {
-                String columnName = columnResultSet.getString("COLUMN_NAME");
-                SqlDataType sqlDataType = sqlDataTypeMapper((columnResultSet.getString("TYPE_NAME")));
-                Integer columnLength = columnResultSet.getInt("COLUMN_SIZE");
-                Boolean columnPrimaryKey = false;
-                ResultSet columnPrimaryKeysSet = columnMeta.getPrimaryKeys(null, null, clazz.getSimpleName());
-                while (columnPrimaryKeysSet.next()) {
-                    if (columnPrimaryKeysSet.getString(4).equalsIgnoreCase(columnName)) {
-                        columnPrimaryKey = true;
-                    }
-                }
-                Boolean columnNotNull = columnResultSet.getString("NULLABLE").equals("0");
-                column = new Column(columnName, sqlDataType, columnLength, columnPrimaryKey, columnNotNull, table);
-            }
+        List<Column> columns = new ArrayList<>();
+        ResultSetMetaData columnMeta = resultSet.getMetaData();
+        Integer columnCount = columnMeta.getColumnCount();
+        for (int i = 0; i < columnCount; i++) {
+            String columnName = columnMeta.getColumnName(i + 1);
+            SqlDataType sqlDataType = sqlDataTypeMapper((columnMeta.getColumnTypeName(i + 1)));
+            Integer columnLength = columnMeta.getPrecision(i + 1);
+            Boolean columnPrimaryKey = columnMeta.isAutoIncrement(i + 1);
+            Boolean columnNotNull = columnMeta.isNullable(i + 1) == 0;
+            columns.add(new Column(columnName, sqlDataType, columnLength, columnPrimaryKey, columnNotNull, table));
         }
 
-        //Get records data from resultSet
-        ResultSet resultSet = preparedStatement.executeQuery();
+        //Get record data from resultSet
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
         List<Cell> cells = new ArrayList<>();
         while (resultSet.next()) {
@@ -590,7 +638,7 @@ public final class Database {
                 } else {
                     object = resultSet.getBlob(resultSetMetaData.getColumnName(i + 1));
                 }
-                cells.add(new Cell(null, column, object));
+                cells.add(new Cell(null, (Column) columns.get(i), object));
             }
         }
 
@@ -611,7 +659,7 @@ public final class Database {
         return records;
     }
 
-    public final Table readTable(final Class clazz) throws ClassNotFoundException, SQLException {
+    public final Table readTable(final Class clazz) throws ClassNotFoundException, SQLException, InterruptedException {
         Table table = new Table(clazz.getSimpleName());
         if (!tableExists(table)) {
             return null;

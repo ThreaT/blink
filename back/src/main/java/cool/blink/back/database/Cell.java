@@ -37,8 +37,8 @@ public final class Cell {
     }
 
     @Override
-    public String toString() {
-        return "Cell{" + "object=" + object + '}';
+    public final String toString() {
+        return "Cell{" + "column=" + column + ", object=" + object + '}';
     }
 
 }

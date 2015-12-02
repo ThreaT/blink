@@ -6,12 +6,20 @@ import java.util.List;
 
 public final class Record {
 
-    private final Table table;
+    private Table table;
     private final List<Cell> cells;
+
+    public Record() {
+        this.cells = new ArrayList<>();
+    }
 
     public Record(final Table table) {
         this.table = table;
         this.cells = new ArrayList<>();
+    }
+
+    public Record(final Cell... cells) {
+        this.cells = Arrays.asList(cells);
     }
 
     public Record(final Table table, final Cell... cells) {
@@ -23,12 +31,16 @@ public final class Record {
         return table;
     }
 
+    public final void setTable(final Table table) {
+        this.table = table;
+    }
+
     public final List<Cell> getCells() {
         return cells;
     }
 
     @Override
-    public String toString() {
+    public final String toString() {
         return "Record{" + "cells=" + cells + '}';
     }
 

@@ -26,7 +26,6 @@ import cool.blink.front.html.property.value.HttpEquivValue;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -63,7 +62,7 @@ public class ValidFoo extends Scenario {
         } catch (SQLException | ClassNotFoundException | IllegalAccessException | IllegalArgumentException ex) {
             Logger.getLogger(ValidFoo.class.getName()).log(Priority.HIGHEST, null, ex);
         } catch (InvocationTargetException | NoSuchMethodException ex) {
-            Logger.getLogger(ValidFoo.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(ValidFoo.class.getName()).log(Priority.HIGHEST, null, ex);
         }
     }
 
@@ -99,8 +98,8 @@ public class ValidFoo extends Scenario {
             }
             report.setPercentage(report.calculatePercentage(report.getTotal(), report.getSuccessful()));
             return report;
-        } catch (ClassNotFoundException | SQLException ex) {
-            Logger.getLogger(ValidFoo.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ClassNotFoundException | SQLException | InterruptedException ex) {
+            Logger.getLogger(ValidFoo.class.getName()).log(Priority.HIGHEST, null, ex);
         }
         return null;
     }
