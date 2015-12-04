@@ -1,5 +1,8 @@
 package cool.blink.back.core;
 
+import cool.blink.back.cloud.Dialog;
+import cool.blink.back.cloud.Postrun;
+import cool.blink.back.cloud.Prerun;
 import cool.blink.back.cluster.Cluster;
 import cool.blink.back.cluster.Node;
 import cool.blink.back.database.Database;
@@ -19,6 +22,8 @@ import java.util.logging.Logger;
 
 public abstract class Blink {
 
+    private final Prerun prerun;
+    private final Postrun postrun;
     private static Cluster cluster;
     private static Node node;
     private static List<Scenario> scenarios;
@@ -28,7 +33,12 @@ public abstract class Blink {
     private static WebServer webServer;
     private static final Set<Session> sessions = new HashSet<>();
 
-    public Blink(Scenario fail, WebServer webServer, Cluster cluster, Node node, Scenario... scenarios) {
+    /*
+     * Constructor for basic web-apps
+     */
+    public Blink(final Scenario fail, final WebServer webServer, final Cluster cluster, final Node node, final Scenario... scenarios) {
+        this.prerun = null;
+        this.postrun = null;
         Blink.cluster = cluster;
         Blink.node = node;
         Blink.scenarios = Arrays.asList(scenarios);
@@ -40,7 +50,29 @@ public abstract class Blink {
         prepareSupportedUrlsForCluster();
     }
 
-    public Blink(Scenario fail, WebServer webServer, Database database, Cluster cluster, Node node, Scenario... scenarios) {
+    /*
+     * Constructor for basic web-apps with prerun and postrun scripts
+     */
+    public Blink(final Prerun prerun, final Postrun postrun, final Scenario fail, final WebServer webServer, final Cluster cluster, final Node node, final Scenario... scenarios) {
+        this.prerun = prerun;
+        this.postrun = postrun;
+        Blink.cluster = cluster;
+        Blink.node = node;
+        Blink.scenarios = Arrays.asList(scenarios);
+        Blink.fail = fail;
+        Blink.webServer = webServer;
+        Blink.scenarios = new ArrayList();
+        Blink.scenarios.addAll(Arrays.asList(scenarios));
+        Blink.scenarios.add(Blink.fail);
+        prepareSupportedUrlsForCluster();
+    }
+
+    /*
+     * Constructor for web-apps with a database
+     */
+    public Blink(final Scenario fail, final WebServer webServer, final Database database, final Cluster cluster, final Node node, final Scenario... scenarios) {
+        this.prerun = null;
+        this.postrun = null;
         Blink.cluster = cluster;
         Blink.node = node;
         Blink.scenarios = Arrays.asList(scenarios);
@@ -53,7 +85,30 @@ public abstract class Blink {
         prepareSupportedUrlsForCluster();
     }
 
-    public Blink(List<Result> results, Scenario fail, WebServer webServer, Cluster cluster, Node node, Scenario... scenarios) {
+    /*
+     * Constructor for web-apps with a database and prerun and postrun scripts
+     */
+    public Blink(final Prerun prerun, final Postrun postrun, final Scenario fail, final WebServer webServer, final Database database, final Cluster cluster, final Node node, final Scenario... scenarios) {
+        this.prerun = prerun;
+        this.postrun = postrun;
+        Blink.cluster = cluster;
+        Blink.node = node;
+        Blink.scenarios = Arrays.asList(scenarios);
+        Blink.fail = fail;
+        Blink.database = database;
+        Blink.webServer = webServer;
+        Blink.scenarios = new ArrayList();
+        Blink.scenarios.addAll(Arrays.asList(scenarios));
+        Blink.scenarios.add(Blink.fail);
+        prepareSupportedUrlsForCluster();
+    }
+
+    /*
+     * Constructor for web-apps with a search
+     */
+    public Blink(final List<Result> results, final Scenario fail, final WebServer webServer, final Cluster cluster, final Node node, final Scenario... scenarios) {
+        this.prerun = null;
+        this.postrun = null;
         Blink.cluster = cluster;
         Blink.node = node;
         Blink.results = results;
@@ -65,7 +120,47 @@ public abstract class Blink {
         prepareSupportedUrlsForCluster();
     }
 
-    public Blink(List<Result> results, Scenario fail, WebServer webServer, Database database, Cluster cluster, Node node, Scenario... scenarios) {
+    /*
+     * Constructor for web-apps with a search and prerun and postrun scripts
+     */
+    public Blink(final Prerun prerun, final Postrun postrun, final List<Result> results, final Scenario fail, final WebServer webServer, final Cluster cluster, final Node node, final Scenario... scenarios) {
+        this.prerun = prerun;
+        this.postrun = postrun;
+        Blink.cluster = cluster;
+        Blink.node = node;
+        Blink.results = results;
+        Blink.fail = fail;
+        Blink.webServer = webServer;
+        Blink.scenarios = new ArrayList();
+        Blink.scenarios.addAll(Arrays.asList(scenarios));
+        Blink.scenarios.add(Blink.fail);
+        prepareSupportedUrlsForCluster();
+    }
+
+    /*
+     * Constructor for web-apps with a search and a database
+     */
+    public Blink(final List<Result> results, final Scenario fail, final WebServer webServer, final Database database, final Cluster cluster, final Node node, final Scenario... scenarios) {
+        this.prerun = null;
+        this.postrun = null;
+        Blink.cluster = cluster;
+        Blink.node = node;
+        Blink.results = results;
+        Blink.fail = fail;
+        Blink.database = database;
+        Blink.webServer = webServer;
+        Blink.scenarios = new ArrayList();
+        Blink.scenarios.addAll(Arrays.asList(scenarios));
+        Blink.scenarios.add(Blink.fail);
+        prepareSupportedUrlsForCluster();
+    }
+
+    /*
+     * Constructor for web-apps with a search, a database and prerun and postrun scripts
+     */
+    public Blink(final Prerun prerun, final Postrun postrun, final List<Result> results, final Scenario fail, final WebServer webServer, final Database database, final Cluster cluster, final Node node, final Scenario... scenarios) {
+        this.prerun = prerun;
+        this.postrun = postrun;
         Blink.cluster = cluster;
         Blink.node = node;
         Blink.results = results;
@@ -100,6 +195,14 @@ public abstract class Blink {
 
     public static final void disableAllLogging() {
         java.util.logging.LogManager.getLogManager().reset();
+    }
+
+    public final Prerun getPrerun() {
+        return prerun;
+    }
+
+    public final Postrun getPostrun() {
+        return postrun;
     }
 
     public static List<Scenario> getScenarios() {
@@ -167,7 +270,13 @@ public abstract class Blink {
         return sessions;
     }
 
-    public void start() {
+    public final void start() {
+        for (Dialog dialog : this.prerun.getDialogs()) {
+            dialog.execute();
+        }
+        if (!this.prerun.getDialogs().isEmpty()) {
+            Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "{0} prerun dialogs executed.", this.prerun.getDialogs().size());
+        }
         Blink.webServer.start();
         Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "WebServer Started.");
         Blink.cluster.getHttpRequestHandler().start();
@@ -183,6 +292,12 @@ public abstract class Blink {
             Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "Database Synchronizer Started.");
             Blink.cluster.getDatabaseActionExecutor().start();
             Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "Database Action Executor Started.");
+        }
+        for (Dialog dialog : this.postrun.getDialogs()) {
+            dialog.execute();
+        }
+        if (!this.postrun.getDialogs().isEmpty()) {
+            Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "{0} postrun dialogs executed.", this.postrun.getDialogs().size());
         }
     }
 }
