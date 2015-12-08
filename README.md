@@ -5,7 +5,7 @@
   <ul style="padding-left: 2em;list-style-type: square;">
     <li>Clean</li>
     <ul style="padding-left: 2em;list-style-type: disc;">
-      <li>Clear start and end points123213213</li>
+      <li>Clear start and end points</li>
       <li>No other files required apart from .java classes</li>
       <li>New web applications can be created with a minimum of two classes</li>
       <li>Number of classes is always relative to size of web application</li>
