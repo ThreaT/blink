@@ -1,6 +1,7 @@
 package cool.blink.back.cluster;
 
 import cool.blink.back.core.Url;
+import cool.blink.back.session.Session;
 import java.io.Serializable;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -9,6 +10,8 @@ import java.util.Objects;
 import java.util.concurrent.LinkedTransferQueue;
 import cool.blink.back.utilities.Sockets;
 import java.net.BindException;
+import java.util.HashMap;
+import java.util.Map;
 
 public final class Node implements Serializable {
 
@@ -20,6 +23,7 @@ public final class Node implements Serializable {
     private final transient LinkedTransferQueue requestQueue;
     private transient Integer requestQueueSize;
     private transient Socket socket;
+    private static final Map<String, Session> sessions = new HashMap<>();
 
     public Node(final Long id, final String address, final Integer port) throws BindException {
         this.id = id;
@@ -84,6 +88,10 @@ public final class Node implements Serializable {
         this.socket = socket;
     }
 
+    public static Map<String, Session> getSessions() {
+        return sessions;
+    }
+
     @Override
     public int hashCode() {
         int hash = 7;
@@ -100,15 +108,12 @@ public final class Node implements Serializable {
             return false;
         }
         final Node other = (Node) obj;
-        if (!Objects.equals(this.id, other.id)) {
-            return false;
-        }
-        return true;
+        return Objects.equals(this.id, other.id);
     }
 
     @Override
     public String toString() {
-        return "Node{" + "id=" + id + ", address=" + address + ", port=" + port + ", supportedUrls=" + supportedUrls + ", handlingRequests=" + handlingRequests + ", requestQueue=" + requestQueue + ", requestQueueSize=" + requestQueueSize + ", socket=" + socket + '}';
+        return "Node{" + "id=" + id + ", address=" + address + ", port=" + port + ", supportedUrls=" + supportedUrls + ", handlingRequests=" + handlingRequests + ", requestQueue=" + requestQueue + ", requestQueueSize=" + requestQueueSize + ", socket=" + socket + ", sessions=" + Node.sessions.toString() + '}';
     }
 
 }

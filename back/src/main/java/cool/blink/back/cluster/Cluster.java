@@ -36,6 +36,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.sql.SQLException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Objects;
 import org.joda.time.DateTime;
 
@@ -347,14 +348,14 @@ public class Cluster {
                                 }
                             }
                             if ((process != null) && (process.getProcessType().equals(ProcessType.SessionUpdateRequest))) {
-                                for (Session remote : (HashSet<Session>) process.getObject()) {
-                                    if (Blink.getSessions().containsKey("" + remote.getId())) {
-                                        Session local = Blink.getSessions().get("" + remote.getId());
-                                        if (local.getCreated().isBefore(remote.getCreated())) {
-                                            Blink.getSessions().put("" + remote.getId(), remote);
+                                for (Map.Entry<String, Session> remote : ((HashMap<String, Session>) process.getObject()).entrySet()) {
+                                    if (Blink.getNode().getSessions().containsKey("" + remote.getValue().getId())) {
+                                        Session local = Blink.getNode().getSessions().get("" + remote.getValue().getId());
+                                        if (local.getCreated().isBefore(remote.getValue().getCreated())) {
+                                            Blink.getNode().getSessions().put("" + remote.getValue().getId(), remote.getValue());
                                         }
                                     } else {
-                                        Blink.getSessions().put("" + remote.getId(), remote);
+                                        Blink.getNode().getSessions().put("" + remote.getValue().getId(), remote.getValue());
                                     }
                                 }
                             }
@@ -493,7 +494,7 @@ public class Cluster {
                 socket.setSoTimeout(Blink.getCluster().getTimeoutInMillis());
                 objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
                 objectInputStream = new ObjectInputStream(socket.getInputStream());
-                objectOutputStream.writeObject(new Process(Blink.getSessions(), Blink.getNode(), ProcessType.SessionUpdateRequest));
+                objectOutputStream.writeObject(new Process(Blink.getNode().getSessions(), Blink.getNode(), ProcessType.SessionUpdateRequest));
                 objectInputStream.close();
                 objectOutputStream.close();
                 socket.close();

@@ -1,12 +1,13 @@
 package cool.blink.back.session;
 
 import cool.blink.back.utilities.Longs;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import org.joda.time.DateTime;
 
-public class Session {
+public class Session implements Serializable {
 
     private Long id;
     private DateTime created;

@@ -31,7 +31,6 @@ public abstract class Blink {
     private static Scenario fail;
     private static Database database;
     private static WebServer webServer;
-    private static final Map<String, Session> sessions = new HashMap<>();
 
     /*
      * Constructor for basic web-apps
@@ -264,10 +263,6 @@ public abstract class Blink {
 
     public static void setWebServer(WebServer webServer) {
         Blink.webServer = webServer;
-    }
-
-    public static Map<String, Session> getSessions() {
-        return sessions;
     }
 
     public final void start() {

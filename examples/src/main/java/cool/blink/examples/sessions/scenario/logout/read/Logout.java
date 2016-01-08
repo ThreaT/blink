@@ -25,7 +25,7 @@ public class Logout extends Scenario {
     @Override
     public void main(Request request) {
         Logger.getLogger(Logout.class.getName()).log(Priority.LOWEST, "Running...");
-        Blink.getSessions().remove("test_user");
+        Blink.getNode().getSessions().remove("test_user");
         Response response = new Response(Status.$302, "");
         response.getHeaders().put(Response.HeaderFieldName.Location, "/examples/sessions/login");
         Blink.getWebServer().respond(request, response);
