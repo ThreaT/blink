@@ -16,7 +16,6 @@ import cool.blink.back.exception.DuplicateNodeIdException;
 import cool.blink.back.session.Session;
 import cool.blink.back.utilities.HttpRequests;
 import cool.blink.back.utilities.Logs.Priority;
-import cool.blink.back.utilities.Sets;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -38,7 +37,6 @@ import java.net.SocketTimeoutException;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Objects;
-import java.util.logging.Level;
 import org.joda.time.DateTime;
 
 /**
@@ -350,13 +348,13 @@ public class Cluster {
                             }
                             if ((process != null) && (process.getProcessType().equals(ProcessType.SessionUpdateRequest))) {
                                 for (Session remote : (HashSet<Session>) process.getObject()) {
-                                    if (Blink.getSessions().contains(remote)) {
-                                        Session local = (Session) Sets.get(Blink.getSessions(), remote);
+                                    if (Blink.getSessions().containsKey("" + remote.getId())) {
+                                        Session local = Blink.getSessions().get("" + remote.getId());
                                         if (local.getCreated().isBefore(remote.getCreated())) {
-                                            Blink.getSessions().add(remote);
+                                            Blink.getSessions().put("" + remote.getId(), remote);
                                         }
                                     } else {
-                                        Blink.getSessions().add(remote);
+                                        Blink.getSessions().put("" + remote.getId(), remote);
                                     }
                                 }
                             }

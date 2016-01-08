@@ -13,9 +13,9 @@ import cool.blink.back.utilities.Logs.Priority;
 import cool.blink.back.webserver.WebServer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -31,7 +31,7 @@ public abstract class Blink {
     private static Scenario fail;
     private static Database database;
     private static WebServer webServer;
-    private static final Set<Session> sessions = new HashSet<>();
+    private static final Map<String, Session> sessions = new HashMap<>();
 
     /*
      * Constructor for basic web-apps
@@ -266,16 +266,18 @@ public abstract class Blink {
         Blink.webServer = webServer;
     }
 
-    public static Set<Session> getSessions() {
+    public static Map<String, Session> getSessions() {
         return sessions;
     }
 
     public final void start() {
-        for (Dialog dialog : this.prerun.getDialogs()) {
-            dialog.execute();
-        }
-        if (!this.prerun.getDialogs().isEmpty()) {
-            Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "{0} prerun dialogs executed.", this.prerun.getDialogs().size());
+        if (this.prerun != null) {
+            for (Dialog dialog : this.prerun.getDialogs()) {
+                dialog.execute();
+            }
+            if (!this.prerun.getDialogs().isEmpty()) {
+                Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "{0} prerun dialogs executed.", this.prerun.getDialogs().size());
+            }
         }
         Blink.webServer.start();
         Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "WebServer Started.");
@@ -293,11 +295,13 @@ public abstract class Blink {
             Blink.cluster.getDatabaseActionExecutor().start();
             Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "Database Action Executor Started.");
         }
-        for (Dialog dialog : this.postrun.getDialogs()) {
-            dialog.execute();
-        }
-        if (!this.postrun.getDialogs().isEmpty()) {
-            Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "{0} postrun dialogs executed.", this.postrun.getDialogs().size());
+        if (this.postrun != null) {
+            for (Dialog dialog : this.postrun.getDialogs()) {
+                dialog.execute();
+            }
+            if (!this.postrun.getDialogs().isEmpty()) {
+                Logger.getLogger(Blink.class.getName()).log(Priority.MEDIUM, "{0} postrun dialogs executed.", this.postrun.getDialogs().size());
+            }
         }
     }
 }
