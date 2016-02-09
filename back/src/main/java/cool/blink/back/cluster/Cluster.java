@@ -46,6 +46,7 @@ import org.joda.time.DateTime;
  */
 public class Cluster {
 
+    private final Integer portScanWaitTimeInMillis;
     private final Integer timeoutInMillis;
     private final List<Territory> exploredTerritories;
     private final List<Node> foundNodes;
@@ -57,7 +58,8 @@ public class Cluster {
     private final DatabaseActionExecutor databaseActionExecutor;
     private final HttpRequestHandler httpRequestHandler;
 
-    public Cluster(Integer timeoutInMillis, Territory... exploredTerritories) throws IOException, ClassNotFoundException {
+    public Cluster(Integer portScanWaitTimeInMillis, Integer timeoutInMillis, Territory... exploredTerritories) throws IOException, ClassNotFoundException {
+        this.portScanWaitTimeInMillis = portScanWaitTimeInMillis;
         this.timeoutInMillis = timeoutInMillis;
         this.exploredTerritories = Arrays.asList(exploredTerritories);
         this.foundNodes = Collections.synchronizedList(new ArrayList());
@@ -74,6 +76,10 @@ public class Cluster {
         this.databaseActionSynchronizer.setPriority(Thread.MIN_PRIORITY);
         this.databaseActionExecutor = new DatabaseActionExecutor();
         this.databaseActionExecutor.setPriority(Thread.MIN_PRIORITY);
+    }
+
+    public Integer getPortScanWaitTimeInMillis() {
+        return portScanWaitTimeInMillis;
     }
 
     /**
@@ -379,7 +385,7 @@ public class Cluster {
             List<Node> tempNodes = new ArrayList<>();
             while (true) {
                 try {
-                    Thread.sleep(30000);
+                    Thread.sleep(portScanWaitTimeInMillis);
                 } catch (InterruptedException ex) {
                     Logger.getLogger(Cluster.class.getName()).log(Priority.HIGHEST, null, ex);
                 }

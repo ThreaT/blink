@@ -24,6 +24,7 @@ public final class Request {
     private final Integer port;
     private final Map<String, String> parameters;
     private final Url url;
+    private final String body;
 
     public Request(final AsynchronousSocketChannel asynchronousSocketChannel, final ByteBuffer byteBuffer, final String data) throws MalformedURLException, CorruptHeadersException, CorruptProtocolException, CorruptMethodException {
         this.asynchronousSocketChannel = asynchronousSocketChannel;
@@ -43,6 +44,7 @@ public final class Request {
             this.parameters = getParametersFromRequestData();
             this.url = new Url(getProtocolFromRequestData(), this.headers.get(HeaderFieldName.Host), this.port, getPathFromRequestData(), parametersToQueryString(this.parameters), false);
         }
+        this.body = data.substring(data.indexOf("\\r\\n\\r\\n") + 8, data.length());
     }
 
     public final AsynchronousSocketChannel getAsynchronousSocketChannel() {
@@ -57,20 +59,28 @@ public final class Request {
         return data;
     }
 
+    public final Http.Method getMethod() {
+        return method;
+    }
+
     public final Map<HeaderFieldName, String> getHeaders() {
         return headers;
     }
 
-    public final Url getUrl() {
-        return url;
+    public final Integer getPort() {
+        return port;
     }
 
     public final Map<String, String> getParameters() {
         return parameters;
     }
 
-    public final Http.Method getMethod() {
-        return method;
+    public final Url getUrl() {
+        return url;
+    }
+
+    public String getBody() {
+        return body;
     }
 
     public enum HeaderFieldName {

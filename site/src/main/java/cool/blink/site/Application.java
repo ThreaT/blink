@@ -41,7 +41,7 @@ public class Application extends Blink {
                     },
                     new Fail(new Url("http://127.0.0.1:80/fail", true), new Url("http://blink.cool:80/fail", true), new Url("http://www.blink.cool:80/fail", true)),
                     new WebServer(80),
-                    new Cluster(3000, new Territory("127.0.0.1", 1, 65535, 250)),
+                    new Cluster(30000, 3000, new Territory("127.0.0.1", 1, 65535, 250)),
                     new Node(Longs.generateUniqueTimeInMillis(), "127.0.0.1", 81),
                     new Redirect(new Url("http://127.0.0.1:80", false), new Url("http://127.0.0.1:80/home", false)),
                     new Redirect(new Url("http://blink.cool:80", false), new Url("http://blink.cool:80/home", false)),

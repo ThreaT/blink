@@ -30,7 +30,7 @@ public class Application extends Blink {
             application = new Application(
                     new Fail(),
                     new WebServer(80),
-                    new Cluster(3000, new Territory("localhost", 1, 65535, 250)),
+                    new Cluster(30000, 3000, new Territory("localhost", 1, 65535, 250)),
                     new Node(Longs.generateUniqueTimeInMillis(), "localhost", 8083),
                     new Redirect(new Url("http://localhost:80/"), new Url("http://localhost:80/examples/sessions/login")),
                     new Redirect(new Url("http://localhost:80/examples/"), new Url("http://localhost:80/examples/sessions/login")),

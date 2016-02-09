@@ -35,7 +35,7 @@ public class Application extends Blink {
                     new Fail(),
                     new WebServer(8081, 443, new File("keystore.jks"), "password"),
                     new Database("helloworld_database", "", Foo.class),
-                    new Cluster(3000, new Territory("localhost", 1, 65535, 250)),
+                    new Cluster(30000, 3000, new Territory("localhost", 1, 65535, 250)),
                     new Node(Longs.generateUniqueId(), "localhost", 8082),
                     new Redirect(new Url("http://localhost:8081/examples/HelloWorld/", false), new Url("http://localhost:8081/examples/HelloWorld/home", true)),
                     new ValidFoo(new Url("http://localhost:8081/examples/HelloWorld/foo", false)),
