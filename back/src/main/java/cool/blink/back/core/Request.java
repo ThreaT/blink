@@ -13,11 +13,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 
 public final class Request {
 
     private final AsynchronousSocketChannel asynchronousSocketChannel;
     private final ByteBuffer byteBuffer;
+    private final String rawData;
     private final String data;
     private final Http.Method method;
     private final Map<HeaderFieldName, String> headers;
@@ -26,10 +28,11 @@ public final class Request {
     private final Url url;
     private final String body;
 
-    public Request(final AsynchronousSocketChannel asynchronousSocketChannel, final ByteBuffer byteBuffer, final String data) throws MalformedURLException, CorruptHeadersException, CorruptProtocolException, CorruptMethodException {
+    public Request(final AsynchronousSocketChannel asynchronousSocketChannel, final ByteBuffer byteBuffer, final String rawData) throws MalformedURLException, CorruptHeadersException, CorruptProtocolException, CorruptMethodException {
         this.asynchronousSocketChannel = asynchronousSocketChannel;
         this.byteBuffer = byteBuffer;
-        this.data = data;
+        this.rawData = rawData;
+        this.data = StringEscapeUtils.escapeJava(rawData);
         if (this.data.contains("\\uFFFD")) {
             this.method = Http.Method.GET;
             this.headers = new HashMap<>();
@@ -44,7 +47,7 @@ public final class Request {
             this.parameters = getParametersFromRequestData();
             this.url = new Url(getProtocolFromRequestData(), this.headers.get(HeaderFieldName.Host), this.port, getPathFromRequestData(), parametersToQueryString(this.parameters), false);
         }
-        this.body = data.substring(data.indexOf("\\r\\n\\r\\n") + 8, data.length());
+        this.body = rawData.substring(rawData.indexOf("\r\n\r\n"), rawData.length());
     }
 
     public final AsynchronousSocketChannel getAsynchronousSocketChannel() {
@@ -57,6 +60,10 @@ public final class Request {
 
     public final String getData() {
         return data;
+    }
+
+    public String getRawData() {
+        return rawData;
     }
 
     public final Http.Method getMethod() {

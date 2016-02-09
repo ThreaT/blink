@@ -20,7 +20,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
-import org.apache.commons.lang3.StringEscapeUtils;
 
 public class WebServer extends Thread {
 
@@ -105,7 +104,7 @@ public class WebServer extends Thread {
                         ByteBuffer byteBuffer = ByteBuffer.allocate(4096);
                         asynchronousSocketChannel.read(byteBuffer).get(2000, TimeUnit.SECONDS);
                         byteBuffer.flip();
-                        Request request = new Request(asynchronousSocketChannel, byteBuffer, StringEscapeUtils.escapeJava(Charset.defaultCharset().decode(byteBuffer).toString()));
+                        Request request = new Request(asynchronousSocketChannel, byteBuffer, Charset.defaultCharset().decode(byteBuffer).toString());
 
                         //Async Response
                         Logger.getLogger(WebServer.class.getName()).log(Priority.LOW, "New request to {0}", request.getUrl());
