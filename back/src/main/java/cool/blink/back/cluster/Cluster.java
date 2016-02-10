@@ -163,14 +163,14 @@ public class Cluster {
                             }
 
                             //5. If no node supports the request then send a redirect to the fail scenario
-                            Response response = new Response(Status.$304, "");
+                            Response response = new Response(Status.$302, "");
                             response.getHeaders().put(Response.HeaderFieldName.Location, "/fail");
                             Blink.getWebServer().respond(request, response);
                         } catch (NullPointerException | IllegalAccessException | InstantiationException | InvocationTargetException | CloneNotSupportedException | IllegalArgumentException | NoSuchMethodException | SecurityException | IOException | InterruptedException ex) {
                             Logger.getLogger(Cluster.class.getName()).log(Priority.HIGHEST, null, ex);
                         }
                     } else {
-                        Response response = new Response(Status.$304, "");
+                        Response response = new Response(Status.$302, "");
                         response.getHeaders().put(Response.HeaderFieldName.Location, "/fail");
                         Blink.getWebServer().respond(request, response);
                     }
@@ -355,13 +355,13 @@ public class Cluster {
                             }
                             if ((process != null) && (process.getProcessType().equals(ProcessType.SessionUpdateRequest))) {
                                 for (Map.Entry<String, Session> remote : ((HashMap<String, Session>) process.getObject()).entrySet()) {
-                                    if (Blink.getNode().getSessions().containsKey("" + remote.getValue().getId())) {
-                                        Session local = Blink.getNode().getSessions().get("" + remote.getValue().getId());
+                                    if (Node.getSessions().containsKey("" + remote.getValue().getId())) {
+                                        Session local = Node.getSessions().get("" + remote.getValue().getId());
                                         if (local.getCreated().isBefore(remote.getValue().getCreated())) {
-                                            Blink.getNode().getSessions().put("" + remote.getValue().getId(), remote.getValue());
+                                            Node.getSessions().put("" + remote.getValue().getId(), remote.getValue());
                                         }
                                     } else {
-                                        Blink.getNode().getSessions().put("" + remote.getValue().getId(), remote.getValue());
+                                        Node.getSessions().put("" + remote.getValue().getId(), remote.getValue());
                                     }
                                 }
                             }
@@ -500,7 +500,7 @@ public class Cluster {
                 socket.setSoTimeout(Blink.getCluster().getTimeoutInMillis());
                 objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
                 objectInputStream = new ObjectInputStream(socket.getInputStream());
-                objectOutputStream.writeObject(new Process(Blink.getNode().getSessions(), Blink.getNode(), ProcessType.SessionUpdateRequest));
+                objectOutputStream.writeObject(new Process(Node.getSessions(), Blink.getNode(), ProcessType.SessionUpdateRequest));
                 objectInputStream.close();
                 objectOutputStream.close();
                 socket.close();
