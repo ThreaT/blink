@@ -1,5 +1,12 @@
 <h4 style="font-weight: bold; font-size: 14px;">Usage</h4>
 ```
+<repository>
+    <id>cool.blink</id>
+    <name>blink</name>
+    <url>https://github.com/ThreaT/blink/raw/master/release/</url>
+</repository>
+```
+```
 <dependency>
     <groupId>cool.blink</groupId>
     <artifactId>back</artifactId>
