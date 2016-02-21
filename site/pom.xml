@@ -20,12 +20,12 @@
             <version>0.9.10</version>
         </dependency>
         <dependency>
-            <groupId>cool.blink</groupId>
+            <groupId>cool.blink.back</groupId>
             <artifactId>back</artifactId>
             <version>1.0.0</version>
         </dependency>
         <dependency>
-            <groupId>cool.blink</groupId>
+            <groupId>cool.blink.front</groupId>
             <artifactId>front</artifactId>
             <version>1.0.0</version>
         </dependency>
@@ -35,13 +35,6 @@
             <version>3.3</version>
         </dependency>
     </dependencies>
-    <repositories>
-        <repository>
-            <id>cool.blink</id>
-            <name>blink</name>
-            <url>https://github.com/ThreaT/blink/raw/master/release/</url>
-        </repository>
-    </repositories>
     <build>
         <plugins>
             <!-- Build an executable jar -->

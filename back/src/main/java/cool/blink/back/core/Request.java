@@ -47,7 +47,7 @@ public final class Request {
             this.parameters = getParametersFromRequestData();
             this.url = new Url(getProtocolFromRequestData(), this.headers.get(HeaderFieldName.Host), this.port, getPathFromRequestData(), parametersToQueryString(this.parameters), false);
         }
-        if (rawData.contains("\r\n\r\n")) {
+        if ((rawData != null) && (!rawData.isEmpty()) && rawData.contains("\r\n\r\n")) {
             this.body = rawData.substring(rawData.indexOf("\r\n\r\n") + 4, rawData.length());
         } else {
             this.body = rawData;
