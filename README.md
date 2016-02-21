@@ -1,4 +1,6 @@
 <h4 style="font-weight: bold; font-size: 14px;">Usage</h4>
+
+<code>
 ```
 <repository>
     <id>cool.blink</id>
@@ -20,8 +22,9 @@
     <version>1.0.0</version>
 </dependency>
 ```
+</code>
 
-<br />
+<br>
 
 <h4 style="font-weight: bold; font-size: 14px;">Features</h4>
 
