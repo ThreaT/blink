@@ -322,13 +322,9 @@ public class Cluster {
                 while (true) {
                     try (Socket socket = serverSocket.accept()) {
                         socket.setSoTimeout(Blink.getCluster().getTimeoutInMillis());
-                        Process process = null;
+                        Process process;
                         try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream()); ObjectInputStream objectInputStream = new ObjectInputStream(socket.getInputStream())) {
-                            try {
-                                process = (Process) objectInputStream.readObject();
-                            } catch (IOException | ClassNotFoundException ex) {
-                                Logger.getLogger(Cluster.class.getName()).log(Priority.HIGHEST, null, ex);
-                            }
+                            process = (Process) objectInputStream.readObject();
                             if ((process != null) && (process.getProcessType().equals(ProcessType.Ping))) {
                                 try {
                                     objectOutputStream.writeObject(new Process(null, Blink.getNode(), ProcessType.Pong));
@@ -365,7 +361,7 @@ public class Cluster {
                                     }
                                 }
                             }
-                        } catch (SQLException | ClassNotFoundException | InterruptedException ex) {
+                        } catch (EOFException | SQLException | ClassNotFoundException | InterruptedException ex) {
                             Logger.getLogger(Cluster.class.getName()).log(Priority.HIGHEST, null, ex);
                         }
                     }
