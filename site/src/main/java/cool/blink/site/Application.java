@@ -30,8 +30,8 @@ public class Application extends Blink {
 
     public static void main(String args[]) {
         try {
-            Blink.enableFileLogging("blink site 1", Priority.HIGH);
-            //Blink.enableConsoleLogging(Priority.LOW);
+            //Blink.enableFileLogging("blink site 1", Priority.HIGH);
+            Blink.enableConsoleLogging(Priority.LOW);
             application = new Application(
                     new ArrayList<Result>() {
                         {

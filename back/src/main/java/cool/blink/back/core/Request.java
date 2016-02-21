@@ -47,7 +47,11 @@ public final class Request {
             this.parameters = getParametersFromRequestData();
             this.url = new Url(getProtocolFromRequestData(), this.headers.get(HeaderFieldName.Host), this.port, getPathFromRequestData(), parametersToQueryString(this.parameters), false);
         }
-        this.body = rawData.substring(rawData.indexOf("\r\n\r\n"), rawData.length());
+        if (rawData.contains("\r\n\r\n")) {
+            this.body = rawData.substring(rawData.indexOf("\r\n\r\n"), rawData.length());
+        } else {
+            this.body = rawData;
+        }
     }
 
     public final AsynchronousSocketChannel getAsynchronousSocketChannel() {
