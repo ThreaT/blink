@@ -49,7 +49,7 @@ public final class Url implements Serializable {
         this.path = path;
         this.query = query;
         this.includeTrailing = includeTrailing;
-        this.absoluteUrl = removeExcessForwardSlashes(protocol + hostname + ":" + port + "/" + path + ((query == null || query.isEmpty()) ? "" : ("?" + query)));
+        this.absoluteUrl = removeExcessForwardSlashes(protocol + hostname + ":" + port + "/" + path + ((query == null || query.isEmpty()) ? "" : query));
     }
 
     public Protocol getProtocol() {

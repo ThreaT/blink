@@ -164,7 +164,9 @@ public final class Request {
 
     public final String getPathFromRequestData() {
         String firstLineOfRequest = this.data.substring(0, this.data.indexOf("\\r\\n"));
-        if (StringUtils.countMatches(firstLineOfRequest, " ") == 2) {
+        if ((StringUtils.countMatches(firstLineOfRequest, " ") == 2) && (firstLineOfRequest.contains("?"))) {
+            return firstLineOfRequest.substring(firstLineOfRequest.indexOf(" ") + 1, firstLineOfRequest.indexOf("?"));
+        } else if (StringUtils.countMatches(firstLineOfRequest, " ") == 2) {
             return firstLineOfRequest.substring(firstLineOfRequest.indexOf(" ") + 1, firstLineOfRequest.indexOf(" ", firstLineOfRequest.indexOf(" ") + 2));
         } else {
             return "";
