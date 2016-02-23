@@ -174,6 +174,15 @@ public final class Url implements Serializable {
         }
     }
 
+    public static final synchronized Boolean hasMatchingAbsoluteUrlsWithoutQueryString(final Url clientUrl, final List<Url> serverUrls) {
+        for (Url serverUrl : serverUrls) {
+            if (hasMatchingAbsoluteUrlsWithoutQueryString(serverUrl, clientUrl)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static final synchronized Boolean hasMatchingAbsoluteUrlsWithoutQueryString(Url server, Url client) {
         server = removeQueryString(server);
         client = removeQueryString(client);
