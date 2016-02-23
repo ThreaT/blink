@@ -233,7 +233,12 @@ public final class Request {
             return parameters1;
         }
         String firstLine = this.data.substring(0, this.data.indexOf("\\r\\n"));
-        String parameterString = firstLine.substring(firstLine.indexOf("?"), firstLine.indexOf(" ", firstLine.indexOf("?")));
+        String parameterString;
+        if (firstLine.contains("?")) {
+            parameterString = firstLine.substring(firstLine.indexOf("?"), firstLine.indexOf(" ", firstLine.indexOf("?")));
+        } else {
+            parameterString = "";
+        }
         String key;
         String value;
         String cutString = parameterString;
