@@ -256,7 +256,7 @@ public final class Request {
         String queryString = "";
         for (Map.Entry<String, String> parameter : parameters.entrySet()) {
             if (queryString.isEmpty()) {
-                queryString += "?";
+                queryString += "";
             } else {
                 queryString += "&";
             }
