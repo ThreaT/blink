@@ -272,7 +272,7 @@ public final class Request {
 
     @Override
     public String toString() {
-        return "Request{" + "asynchronousSocketChannel=" + asynchronousSocketChannel + ", byteBuffer=" + byteBuffer + ", data=" + data + ", method=" + method + ", headers=" + headers + ", port=" + port + ", parameters=" + parameters + ", url=" + url + '}';
+        return "Request{" + "asynchronousSocketChannel=" + asynchronousSocketChannel + ", byteBuffer=" + byteBuffer + ", rawData=" + rawData + ", data=" + data + ", method=" + method + ", headers=" + headers + ", port=" + port + ", parameters=" + parameters + ", url=" + url + ", body=" + body + '}';
     }
 
 }

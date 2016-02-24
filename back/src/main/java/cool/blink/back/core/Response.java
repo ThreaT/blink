@@ -19,6 +19,15 @@ public final class Response {
         this.data = "HTTP/1.0" + " " + this.status.name().substring(1) + " " + this.headers.get(HeaderFieldName.Status) + "\r\n" + getHeadersFromHeaderMap(this.headers) + "\r\n" + payload;
     }
 
+    public Response(final Status status, final String payload, final String contentType) {
+        this.headers = new HashMap<>();
+        this.headers.put(HeaderFieldName.Status, status.toString());
+        this.headers.put(HeaderFieldName.Content_Type, contentType);
+        this.status = status;
+        this.payload = payload;
+        this.data = "HTTP/1.0" + " " + this.status.name().substring(1) + " " + this.headers.get(HeaderFieldName.Status) + "\r\n" + getHeadersFromHeaderMap(this.headers) + "\r\n" + payload;
+    }
+
     public final Map<HeaderFieldName, String> getHeaders() {
         return headers;
     }
@@ -182,7 +191,7 @@ public final class Response {
 
     @Override
     public String toString() {
-        return "Response{" + "headers=" + headers + ", status=" + status + ", payload=" + payload + ", data=" + getData() + '}';
+        return "Response{" + "headers=" + headers + ", status=" + status + ", payload=" + payload + ", data=" + data + '}';
     }
 
 }
