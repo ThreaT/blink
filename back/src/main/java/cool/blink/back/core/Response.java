@@ -1,5 +1,6 @@
 package cool.blink.back.core;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -7,25 +8,25 @@ public final class Response {
 
     private final Map<HeaderFieldName, String> headers;
     private Status status;
-    private final String payload;
+    private final byte[] payload;
     private String data;
 
     public Response(final Status status, final String payload) {
         this.headers = new HashMap<>();
         this.headers.put(HeaderFieldName.Status, status.toString());
-        this.headers.put(HeaderFieldName.Content_Type, "Content-Type: text/html; charset=UTF-8");
+        this.headers.put(HeaderFieldName.Content_Type, "text/html; charset=UTF-8");
         this.status = status;
-        this.payload = payload;
-        this.data = "HTTP/1.0" + " " + this.status.name().substring(1) + " " + this.headers.get(HeaderFieldName.Status) + "\r\n" + getHeadersFromHeaderMap(this.headers) + "\r\n" + payload;
+        this.payload = payload.getBytes();
+        this.data = "HTTP/1.0" + " " + this.status.name().substring(1) + " " + this.headers.get(HeaderFieldName.Status) + "\r\n" + getHeadersFromHeaderMap(this.headers) + "\r\n";
     }
 
-    public Response(final Status status, final String payload, final String contentType) {
+    public Response(final Status status, final byte[] payload, final String contentType) {
         this.headers = new HashMap<>();
         this.headers.put(HeaderFieldName.Status, status.toString());
         this.headers.put(HeaderFieldName.Content_Type, contentType);
         this.status = status;
         this.payload = payload;
-        this.data = "HTTP/1.0" + " " + this.status.name().substring(1) + " " + this.headers.get(HeaderFieldName.Status) + "\r\n" + getHeadersFromHeaderMap(this.headers) + "\r\n" + payload;
+        this.data = "HTTP/1.0" + " " + this.status.name().substring(1) + " " + this.headers.get(HeaderFieldName.Status) + "\r\n" + getHeadersFromHeaderMap(this.headers) + "\r\n";
     }
 
     public final Map<HeaderFieldName, String> getHeaders() {
@@ -40,12 +41,12 @@ public final class Response {
         this.status = status;
     }
 
-    public final String getPayload() {
+    public final byte[] getPayload() {
         return payload;
     }
 
     public final String getData() {
-        this.data = "HTTP/1.0" + " " + this.status.name().substring(1) + " " + this.headers.get(HeaderFieldName.Status) + "\r\n" + getHeadersFromHeaderMap(this.headers) + "\r\n" + payload;
+        this.data = "HTTP/1.0" + " " + this.status.name().substring(1) + " " + this.headers.get(HeaderFieldName.Status) + "\r\n" + getHeadersFromHeaderMap(this.headers) + "\r\n";
         return data;
     }
 
@@ -191,7 +192,7 @@ public final class Response {
 
     @Override
     public String toString() {
-        return "Response{" + "headers=" + headers + ", status=" + status + ", payload=" + payload + ", data=" + data + '}';
+        return "Response{" + "headers=" + headers + ", status=" + status + ", payload=" + Arrays.toString(payload) + ", data=" + data + '}';
     }
 
 }
