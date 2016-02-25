@@ -244,15 +244,13 @@ public final class Request {
         String cutString = parameterString;
         while (cutString.contains("=")) {
             key = cutString.substring(1, cutString.indexOf("="));
-
-            value = "";
-            if ((cutString.contains("&")) && (cutString.indexOf("&") > 0)) {
+            if (cutString.contains("&")) {
                 value = cutString.substring(cutString.indexOf("=") + 1, cutString.indexOf("&"));
-            } else if (cutString.indexOf("&") <= 0) {
+            } else {
                 value = cutString.substring(cutString.indexOf("=") + 1, cutString.length());
             }
             parameters1.put(key, value);
-            cutString = cutString.substring(cutString.indexOf(value) + value.length(), cutString.length());
+            cutString = cutString.substring((cutString.indexOf(value) - 1) + value.length(), cutString.length());
         }
         return parameters1;
     }
