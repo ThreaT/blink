@@ -102,7 +102,7 @@ public class WebServer extends Thread {
 
                         //New Request
                         ByteBuffer byteBuffer = ByteBuffer.allocate(10485760);
-                        asynchronousSocketChannel.read(byteBuffer).get(2000, TimeUnit.SECONDS);
+                        asynchronousSocketChannel.read(byteBuffer).get(120000, TimeUnit.SECONDS);
                         byteBuffer.flip();
                         Request request = new Request(asynchronousSocketChannel, byteBuffer, Charset.defaultCharset().decode(byteBuffer).toString());
 
