@@ -1,22 +1,26 @@
 <h4 style="font-weight: bold; font-size: 14px;">Usage</h4>
 
-&lt;repository&gt;
-    &lt;id&gt;cool.blink&lt;/id&gt;
-    &lt;name&gt;blink&lt;/name&gt;
-    &lt;url&gt;https://github.com/ThreaT/blink/raw/master/release/&lt;/url&gt;
-&lt;/repository&gt;
-
-&lt;dependency&gt;
-    &lt;groupId&gt;cool.blink&lt;/groupId&gt;
-    &lt;artifactId&gt;back&lt;/artifactId&gt;
-    &lt;version&gt;1.0.0&lt;/version&gt;
-&lt;/dependency&gt;
-
-&lt;dependency&gt;
-    &lt;groupId&gt;cool.blink&lt;/groupId&gt;
-    &lt;artifactId&gt;front&lt;/artifactId&gt;
-    &lt;version&gt;1.0.0&lt;/version&gt;
-&lt;/dependency&gt;
+```
+<repository>
+    <id>cool.blink</id>
+    <name>blink</name>
+    <url>https://github.com/ThreaT/blink/raw/master/release/</url>
+</repository>
+```
+```
+<dependency>
+    <groupId>cool.blink</groupId>
+    <artifactId>back</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+```
+<dependency>
+    <groupId>cool.blink</groupId>
+    <artifactId>front</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
 
 <br>
 
