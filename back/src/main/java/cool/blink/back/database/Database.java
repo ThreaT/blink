@@ -186,7 +186,7 @@ public final class Database {
         VARCHAR
     }
 
-    public final SqlDataType sqlDataTypeMapper(final String type) {
+    public static final SqlDataType sqlDataTypeMapper(final String type) {
         SqlDataType sqlDataType = null;
         switch (type.toUpperCase()) {
             case "BIGINT":
