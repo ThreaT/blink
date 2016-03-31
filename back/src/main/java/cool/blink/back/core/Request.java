@@ -239,6 +239,15 @@ public final class Request {
         } else {
             parameterString = "";
         }
+        if ("".equals(parameterString)) {
+            String lastLine = this.data.substring(this.data.indexOf("\\r\\n\\r\\n") + 8, this.data.length());
+            if (!lastLine.contains("?")) {
+                lastLine = "?" + lastLine;
+            }
+            if (lastLine.contains("=")) {
+                parameterString = lastLine;
+            }
+        }
         String key;
         String value;
         String cutString = parameterString;
