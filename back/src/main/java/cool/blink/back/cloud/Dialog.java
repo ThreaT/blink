@@ -1,6 +1,6 @@
 package cool.blink.back.cloud;
 
-import cool.blink.back.utilities.Logs;
+import cool.blink.back.utilities.LogUtilities;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -64,7 +64,7 @@ public final class Dialog {
             this.completed = new DateTime();
             this.condition.compare();
         } catch (IOException | InterruptedException ex) {
-            Logger.getLogger(Prerun.class.getName()).log(Logs.Priority.HIGHEST, null, ex);
+            Logger.getLogger(Prerun.class.getName()).log(LogUtilities.Priority.HIGHEST, null, ex);
         }
     }
 

@@ -1,13 +1,13 @@
 package cool.blink.site.home.read;
 
-import cool.blink.back.core.Report;
-import cool.blink.back.core.Request;
-import cool.blink.back.core.Scenario;
-import cool.blink.back.core.Response;
-import cool.blink.back.core.Response.Status;
-import cool.blink.back.core.Url;
-import cool.blink.back.utilities.HttpRequests;
-import cool.blink.back.utilities.Logs.Priority;
+import cool.blink.back.webserver.Report;
+import cool.blink.back.webserver.Request;
+import cool.blink.back.webserver.Scenario;
+import cool.blink.back.webserver.Response;
+import cool.blink.back.webserver.Response.Status;
+import cool.blink.back.webserver.Url;
+import cool.blink.back.utilities.HttpRequestUtilities;
+import cool.blink.back.utilities.LogUtilities.Priority;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.Id;
@@ -71,7 +71,7 @@ import cool.blink.front.javascript.template.Ajax;
 import cool.blink.front.javascript.template.SearchBoxToggle;
 import cool.blink.front.css.template.ImageValue;
 import cool.blink.front.javascript.template.ToggleValue;
-import cool.blink.site.Application;
+import cool.blink.site.Site;
 import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap;
 import java.util.logging.Logger;
@@ -93,7 +93,7 @@ public class Home extends Scenario {
     @Override
     public void main(Request request) {
         Logger.getLogger(Home.class.getName()).log(Priority.LOWEST, "Running main: {0}", this.toString());
-        Application.getWebServer().respond(request, homeTemplate.getResponse());
+        Site.site.getWebServer().respond(request, homeTemplate.getResponse());
     }
 
     /**
@@ -155,7 +155,7 @@ public class Home extends Scenario {
             this.head = new Head();
             this.title = (Title) new Title().append(new Text("blink"));
             this.reset = (StyleElement) new StyleElement().append(new Text(new NoHeightReset().getReset()));
-            this.pageStyle = (StyleElement) new StyleElement().append(new Text("html" + "{" + new BackgroundColor(240, 240, 240, 0.5).print() + new BackgroundImage(ImageValue.png, Base64Backgrounds.absurdity).print() + "}"));
+            this.pageStyle = (StyleElement) new StyleElement().append(new Text("html" + "{" + new BackgroundColor(240, 240, 240, 0.5).print() + new BackgroundImage(ImageValue.png, Base64Backgrounds.absurdityPng).print() + "}"));
             this.minWidthMediaQuery = (StyleElement) new StyleElement().append(new Text("@media screen and (min-width:600px) {#content {background-color:white;}}"));
             this.maxWidthMediaQuery = (StyleElement) new StyleElement().append(new Text("@media screen and (max-width:599px) {#content {background-color:blue;}}"));
             this.searchBoxToggle = new SearchBoxToggle("searchResults", "searchBar", ToggleValue.display);
@@ -163,13 +163,13 @@ public class Home extends Scenario {
             this.oninput = new Oninput(this.searchBoxToggle.getCall() + " " + this.ajax.getCall());
             this.searchBar = (Input) new Input().append(new Id("searchBar")).append(new Style(new MarginTop(80, MarginTopValue.pixels), new PaddingLeft(10, PaddingLeftValue.pixels), new Height(30, HeightValue.pixels), new Width(100, WidthValue.percent), new Border(0, BorderWidthValue.pixels))).append(oninput);
             this.body = new Body();
-            this.responsiveHeader = (Div) new Div().append(new Style(new BackgroundColor(0, 0, 0, 1.0), new BackgroundImage(ImageValue.png, Base64Backgrounds.darkCircles), new Color(ColorNameValue.White), new Width(100, WidthValue.percent), new Height(200, HeightValue.pixels)));
+            this.responsiveHeader = (Div) new Div().append(new Style(new BackgroundColor(0, 0, 0, 1.0), new BackgroundImage(ImageValue.png, Base64Backgrounds.darkCirclesPng), new Color(ColorNameValue.White), new Width(100, WidthValue.percent), new Height(200, HeightValue.pixels)));
             this.resultsBox = (Div) new Div().append(new Id("searchResults")).append(new Style(new Color(ColorNameValue.Black), new Position(PositionValue.relative), new Zindex(1), new Width(270, WidthValue.pixels), new Display(DisplayValue.none), new MarginLeft(MarginLeftValue.auto), new MarginRight(MarginRightValue.auto)));
             this.script = (Script) new Script().append(new ScriptType("text/javascript")).append(new Text(ajax.getFunction())).append(new Text(searchBoxToggle.getFunction()));
             this.searchDiv = (Div) new Div().append(new Style(new Width(270, WidthValue.pixels), new MarginLeft(MarginLeftValue.auto), new MarginRight(MarginRightValue.auto)));
-            this.header = (Div) new Div().append(new Style(new BackgroundColor(ColorNameValue.Black), new BackgroundImage(ImageValue.png, Base64Backgrounds.darkCircles), new Color(ColorNameValue.White), new Width(100, WidthValue.percent), new Height(200, HeightValue.pixels)));
+            this.header = (Div) new Div().append(new Style(new BackgroundColor(ColorNameValue.Black), new BackgroundImage(ImageValue.png, Base64Backgrounds.darkCirclesPng), new Color(ColorNameValue.White), new Width(100, WidthValue.percent), new Height(200, HeightValue.pixels)));
             this.main = (Div) new Div().append(new Id("main")).append(new Style(new Width(100, WidthValue.percent), new Height(100, HeightValue.percent), new MarginBottom(10, MarginBottomValue.pixels), new MaxWidth(960, MaxWidthValue.pixels), new MarginTop(30, MarginTopValue.pixels), new MarginLeft(MarginLeftValue.auto), new MarginRight(MarginRightValue.auto), new BackgroundColor(BackgroundColorValue.transparent)));
-            Div temp = (Div) new Div().append(new Id("about")).append(new Style(new Width(100, WidthValue.percent), new MinHeight(200, MinHeightValue.pixels), new MarginBottom(10, MarginBottomValue.pixels), new MarginTop(10, MarginTopValue.pixels), new MaxWidth(960, MaxWidthValue.pixels), new MarginLeft(MarginLeftValue.auto), new MarginRight(MarginRightValue.auto), new BackgroundColor(120, 170, 255, 0.1), new Padding(15, PaddingValue.pixels))).append((Div) new Div().append(new Text("about")).append(new Style(new FontWeight(700)))).append(new Div().append(new Style(new MarginTop(20, MarginTopValue.pixels))).append(new Text(new String(HttpRequests.sendGet("https://raw.githubusercontent.com/ThreaT/blink/master/README.md").getPayload(), StandardCharsets.UTF_8))));
+            Div temp = (Div) new Div().append(new Id("about")).append(new Style(new Width(100, WidthValue.percent), new MinHeight(200, MinHeightValue.pixels), new MarginBottom(10, MarginBottomValue.pixels), new MarginTop(10, MarginTopValue.pixels), new MaxWidth(960, MaxWidthValue.pixels), new MarginLeft(MarginLeftValue.auto), new MarginRight(MarginRightValue.auto), new BackgroundColor(120, 170, 255, 0.1), new Padding(15, PaddingValue.pixels))).append((Div) new Div().append(new Text("about")).append(new Style(new FontWeight(700)))).append(new Div().append(new Style(new MarginTop(20, MarginTopValue.pixels))).append(new Text(new String(HttpRequestUtilities.sendGet("https://raw.githubusercontent.com/ThreaT/blink/master/README.md").getPayload(), StandardCharsets.UTF_8))));
             this.about = temp;
             this.apps = (Div) new Div().append(new Id("apps")).append(new Style(new MarginRight(MarginRightValue.auto), new MarginLeft(MarginLeftValue.auto), new Width(990, WidthValue.pixels)));
             this.app1 = (Div) new Div().append(new Id("app1")).append(new Onclick("location.href='/htmltofront'")).append(new Style(new Width(45, WidthValue.percent), new Cursor(CursorValue.pointer), new Height(200, HeightValue.pixels), new MinHeight(200, MinHeightValue.pixels), new MarginBottom(20, MarginBottomValue.pixels), new MarginTop(10, MarginTopValue.pixels), new MaxWidth(960, MaxWidthValue.pixels), new Float(FloatValue.left), new BackgroundColor(120, 170, 255, 0.1), new Padding(15, PaddingValue.pixels))).append(new Div().append(new Style(new Height(70, HeightValue.percent), new Width(25, WidthValue.percent), new Padding(20, PaddingValue.pixels), new MarginTop(2, MarginTopValue.percent), new MarginLeft(5, MarginLeftValue.percent), new Float(FloatValue.left))).append(new Div().append(new Style(new Width(100, WidthValue.percent), new Height(100, HeightValue.percent), new BackgroundRepeat(BackgroundRepeatValue.no_repeat), new BackgroundSize(BackgroundSizeValue.cover), new BackgroundImage(ImageValue.png, "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAMAAACdt4HsAAABEVBMVEVfxbfaj1H01YH///9fxbdfxbdfxbdfxbdfxbfaj1Ffxbfaj1Ffxbf01YH01YFfxbf01YH01YH01YH01YH01YH01YH01YFfxbf01YFfxbdfxbdfxbdfxbdfxbdfxbdfxbdfxbdfxbdfxbdfxbfaj1Haj1H01YH01YFfxbf01YH01YH01YH01YH01YFfxbf01YH01YH01YFfxbdfxbdfxbfaj1Haj1Haj1Haj1FfxbdfxbdfxbdfxbfNsmvOs2vOtGzPtGzRtW3Rtm7St27UuG/UuW/VunDWu3DXu3HYu3HZvXLaj1HavnLfwnXixXfkx3jlx3jnyXnnyXroynru0H7v0H7w0X7x0n/y04Dz04D01YHy0WzsAAAAPHRSTlMAAAAAAQYVICIlJyc4Ozw9PT4/QEJDRUdHSl5jZWZnc5SfoaWsrbm6vLy9vr/AwcHDxcvR3+/w8fP3+fxew9meAAABcklEQVR42u3VSVPCQBCG4UlwQxTFuG+4gBvgDm5pAsYNkEVUMPP/f4hT05LxwpQ17cGyeA+p6gNPfRcSFumfZUVThUIqallWpG9aIJavifIxYyBdk6WNgQsELo2B2lcD4M8DtqYeYGtiWW6ag4BjDBwhYBMmIDBjPgEBwoRZCRAmHCNAmDCHQIIyQQBqwl25ywPfD3i3fK+9wuYlEE7wocnbAC+8BbfaK+wEATuDZx2eeBWgyitQ116qRQGoCe9Q7HieV+wU4U1/qQkIOBx7hApUn8XjQX+pdhDIcawFAO1X8WjqL9UkUwNEgQdeEJTA+9Beql2b4YBezVKD84Z4aC9VXAION23flkDOGIgLgDLggPp3npaA+YAM9ZWWIL5Us7/zWqd+WOjA4PM+AP4pwL5FAbY3pmjAmuueLVGAkRvXdbcIADt0RRQgSQXGScDo8ua5KRD+2BgYHls5JQGiodUrAiBbuCYCbJ0KsD0qMPFT4BPeO1n5ZwjdXQAAAABJRU5ErkJggg=="))))).append(new Div().append(new Style(new Height(70, HeightValue.percent), new Width(45, WidthValue.percent), new Padding(20, PaddingValue.pixels), new MarginTop(2, MarginTopValue.percent), new Float(FloatValue.left))).append(new Div().append(new Style(new MarginBottom(5, MarginBottomValue.pixels))).append(new Div().append(new Text("I'm more comfortable with plain html coding but want the benefits of Front.")))));

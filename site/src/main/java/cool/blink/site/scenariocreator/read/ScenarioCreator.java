@@ -1,12 +1,12 @@
 package cool.blink.site.scenariocreator.read;
 
-import cool.blink.back.core.Report;
-import cool.blink.back.core.Request;
-import cool.blink.back.core.Response;
-import cool.blink.back.core.Response.Status;
-import cool.blink.back.core.Scenario;
-import cool.blink.back.core.Url;
-import cool.blink.back.utilities.Logs.Priority;
+import cool.blink.back.webserver.Report;
+import cool.blink.back.webserver.Request;
+import cool.blink.back.webserver.Response;
+import cool.blink.back.webserver.Response.Status;
+import cool.blink.back.webserver.Scenario;
+import cool.blink.back.webserver.Url;
+import cool.blink.back.utilities.LogUtilities.Priority;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.Placeholder;
@@ -38,7 +38,7 @@ import cool.blink.front.html.property.value.MarginRightValue;
 import cool.blink.front.html.property.value.MarginTopValue;
 import cool.blink.front.html.property.value.WidthValue;
 import cool.blink.front.css.template.Reset;
-import cool.blink.site.Application;
+import cool.blink.site.Site;
 import cool.blink.site.home.read.Home;
 import java.util.logging.Logger;
 
@@ -59,7 +59,7 @@ public class ScenarioCreator extends Scenario {
     @Override
     public void main(Request request) {
         Logger.getLogger(Home.class.getName()).log(Priority.LOWEST, "Running main: {0}", this.toString());
-        Application.getWebServer().respond(request, scenarioCreatorTemplate.getResponse());
+        Site.site.getWebServer().respond(request, scenarioCreatorTemplate.getResponse());
     }
 
     /**

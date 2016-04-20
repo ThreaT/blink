@@ -1,12 +1,12 @@
 package cool.blink.site.htmltofront.create;
 
-import cool.blink.back.core.Report;
-import cool.blink.back.core.Request;
-import cool.blink.back.core.Response;
-import cool.blink.back.core.Response.Status;
-import cool.blink.back.core.Scenario;
-import cool.blink.back.core.Url;
-import cool.blink.back.utilities.Logs.Priority;
+import cool.blink.back.webserver.Report;
+import cool.blink.back.webserver.Request;
+import cool.blink.back.webserver.Response;
+import cool.blink.back.webserver.Response.Status;
+import cool.blink.back.webserver.Scenario;
+import cool.blink.back.webserver.Url;
+import cool.blink.back.utilities.LogUtilities.Priority;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.Action;
@@ -29,7 +29,7 @@ import cool.blink.front.html.property.value.HeightValue;
 import cool.blink.front.html.property.value.MethodValue;
 import cool.blink.front.html.property.value.WidthValue;
 import cool.blink.front.css.template.Reset;
-import cool.blink.site.Application;
+import cool.blink.site.Site;
 import cool.blink.site.home.read.Home;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.htmlparser.jericho.Attribute;
 import net.htmlparser.jericho.Attributes;
@@ -72,7 +71,7 @@ public class HtmlToFront extends Scenario {
             String html = request.getParameters().get("html");
             String front = convertAllElements(html);
             Response response = new HtmlToFrontTemplate(html, front).getResponse();
-            Application.getWebServer().respond(request, response);
+            Site.site.getWebServer().respond(request, response);
         } catch (IOException ex) {
             Logger.getLogger(HtmlToFront.class.getName()).log(Priority.HIGHEST, null, ex);
         }

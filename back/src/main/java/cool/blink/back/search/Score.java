@@ -1,6 +1,6 @@
 package cool.blink.back.search;
 
-import cool.blink.back.utilities.Maps;
+import cool.blink.back.utilities.MapUtilities;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -95,7 +95,7 @@ public class Score {
         for (Result result : allResults) {
             allScores.put(result, calculateResultGrade(query, result));
         }
-        allScores = Maps.sortDescendingByValue(allScores);
+        allScores = MapUtilities.sortDescendingByValue(allScores);
         List<Result> results = new ArrayList<>();
         for (Map.Entry<Result, Double> result : allScores.entrySet()) {
             if (results.size() < maxResults) {

@@ -1,12 +1,12 @@
 package cool.blink.site.scenariocreator.create;
 
-import cool.blink.back.core.Report;
-import cool.blink.back.core.Request;
-import cool.blink.back.core.Response;
-import cool.blink.back.core.Response.Status;
-import cool.blink.back.core.Scenario;
-import cool.blink.back.core.Url;
-import cool.blink.back.utilities.Logs.Priority;
+import cool.blink.back.webserver.Report;
+import cool.blink.back.webserver.Request;
+import cool.blink.back.webserver.Response;
+import cool.blink.back.webserver.Response.Status;
+import cool.blink.back.webserver.Scenario;
+import cool.blink.back.webserver.Url;
+import cool.blink.back.utilities.LogUtilities.Priority;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.Action;

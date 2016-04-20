@@ -1,16 +1,18 @@
 package cool.blink.examples.sessions.scenario.login.read;
 
-import cool.blink.back.core.Blink;
-import cool.blink.back.core.Http;
-import cool.blink.back.core.Report;
-import cool.blink.back.core.Request;
-import cool.blink.back.core.Response;
-import cool.blink.back.core.Response.Status;
-import cool.blink.back.core.Scenario;
-import cool.blink.back.core.Url;
-import cool.blink.back.session.Session;
-import cool.blink.back.utilities.Dates;
-import cool.blink.back.utilities.Logs.Priority;
+import cool.blink.back.core.Container;
+import cool.blink.back.webserver.Report;
+import cool.blink.back.webserver.Request;
+import cool.blink.back.webserver.Response;
+import cool.blink.back.webserver.Response.Status;
+import cool.blink.back.webserver.Scenario;
+import cool.blink.back.webserver.Url;
+import cool.blink.back.webserver.Session;
+import cool.blink.back.utilities.DateUtilities;
+import cool.blink.back.utilities.HttpUtilities;
+import cool.blink.back.utilities.LogUtilities.Priority;
+import cool.blink.back.webserver.WebServer;
+import cool.blink.examples.sessions.Sessions;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.Action;
@@ -52,15 +54,16 @@ public class Login extends Scenario {
     @Override
     public void main(Request request) {
         Logger.getLogger(Login.class.getName()).log(Priority.LOWEST, "Running...");
-        if (request.getMethod().equals(Http.Method.POST)) {
-            Boolean loggedin = (Blink.getNode().getSessions().get("test_user") != null) && (Boolean) Blink.getNode().getSessions().get("test_user").getParameters().get("logged_in_status") == true;
+        WebServer webServer = Container.getWebServer(Sessions.sessions.getName());
+        if (request.getMethod().equals(HttpUtilities.Method.POST)) {
+            Boolean loggedin = (webServer.getSessionManager().getActiveSessions().get("test_user") != null) && (Boolean) webServer.getSessionManager().getActiveSessions().get("test_user").getParameters().get("logged_in_status") == true;
             if (!loggedin) {
-                Session session = new Session(Dates.generateUniqueDateTime(), 30);
+                Session session = new Session(DateUtilities.generateUniqueDateTime(), 30);
                 session.getParameters().put("logged_in_status", true);
-                Blink.getNode().getSessions().put("test_user", session);
+                webServer.getSessionManager().getActiveSessions().put("test_user", session);
             }
         }
-        Blink.getWebServer().respond(request, new LoginTemplate().getResponse());
+        webServer.respond(request, new LoginTemplate(webServer).getResponse());
     }
 
     /**
@@ -107,8 +110,8 @@ public class Login extends Scenario {
         private final Input password;
         private final Input submit;
 
-        private LoginTemplate() {
-            Boolean loggedin = (Blink.getNode().getSessions().get("test_user") != null) && (Boolean) Blink.getNode().getSessions().get("test_user").getParameters().get("logged_in_status") == true;
+        private LoginTemplate(final WebServer webServer) {
+            Boolean loggedin = (webServer.getSessionManager().getActiveSessions().get("test_user") != null) && (Boolean) webServer.getSessionManager().getActiveSessions().get("test_user").getParameters().get("logged_in_status") == true;
 
             this.html = new Html();
             this.head = (Head) new Head();

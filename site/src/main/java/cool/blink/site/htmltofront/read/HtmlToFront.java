@@ -1,11 +1,11 @@
 package cool.blink.site.htmltofront.read;
 
-import cool.blink.back.core.Report;
-import cool.blink.back.core.Request;
-import cool.blink.back.core.Scenario;
-import cool.blink.back.core.Url;
-import cool.blink.back.utilities.Logs.Priority;
-import cool.blink.site.Application;
+import cool.blink.back.webserver.Report;
+import cool.blink.back.webserver.Request;
+import cool.blink.back.webserver.Scenario;
+import cool.blink.back.webserver.Url;
+import cool.blink.back.utilities.LogUtilities.Priority;
+import cool.blink.site.Site;
 import cool.blink.site.home.read.Home;
 import java.util.logging.Logger;
 
@@ -24,7 +24,7 @@ public class HtmlToFront extends Scenario {
     @Override
     public void main(Request request) {
         Logger.getLogger(Home.class.getName()).log(Priority.LOWEST, "Running main: {0}", this.toString());
-        Application.getWebServer().respond(request, cool.blink.site.htmltofront.create.HtmlToFront.htmlToFrontTemplate.getResponse());
+        Site.site.getWebServer().respond(request, cool.blink.site.htmltofront.create.HtmlToFront.htmlToFrontTemplate.getResponse());
     }
 
     /**

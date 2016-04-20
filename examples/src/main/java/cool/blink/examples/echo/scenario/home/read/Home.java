@@ -1,13 +1,15 @@
 package cool.blink.examples.echo.scenario.home.read;
 
-import cool.blink.back.core.Blink;
-import cool.blink.back.core.Report;
-import cool.blink.back.core.Request;
-import cool.blink.back.core.Response;
-import cool.blink.back.core.Response.Status;
-import cool.blink.back.core.Scenario;
-import cool.blink.back.core.Url;
-import cool.blink.back.utilities.Logs.Priority;
+import cool.blink.back.core.Container;
+import cool.blink.back.webserver.Report;
+import cool.blink.back.webserver.Request;
+import cool.blink.back.webserver.Response;
+import cool.blink.back.webserver.Response.Status;
+import cool.blink.back.webserver.Scenario;
+import cool.blink.back.webserver.Url;
+import cool.blink.back.utilities.LogUtilities.Priority;
+import cool.blink.back.webserver.WebServer;
+import cool.blink.examples.echo.Echo;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.ButtonType;
@@ -60,7 +62,8 @@ public class Home extends Scenario {
     @Override
     public void main(Request request) {
         Logger.getLogger(Home.class.getName()).log(Priority.LOWEST, "Running...");
-        Blink.getWebServer().respond(request, homeTemplate.getResponse());
+        WebServer webServer = Container.getWebServer(Echo.echo.getName());
+        webServer.respond(request, homeTemplate.getResponse());
     }
 
     /**

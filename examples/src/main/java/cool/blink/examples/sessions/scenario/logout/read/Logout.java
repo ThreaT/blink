@@ -1,13 +1,15 @@
 package cool.blink.examples.sessions.scenario.logout.read;
 
-import cool.blink.back.core.Blink;
-import cool.blink.back.core.Report;
-import cool.blink.back.core.Request;
-import cool.blink.back.core.Response;
-import cool.blink.back.core.Response.Status;
-import cool.blink.back.core.Scenario;
-import cool.blink.back.core.Url;
-import cool.blink.back.utilities.Logs.Priority;
+import cool.blink.back.core.Container;
+import cool.blink.back.webserver.Report;
+import cool.blink.back.webserver.Request;
+import cool.blink.back.webserver.Response;
+import cool.blink.back.webserver.Response.Status;
+import cool.blink.back.webserver.Scenario;
+import cool.blink.back.webserver.Url;
+import cool.blink.back.utilities.LogUtilities.Priority;
+import cool.blink.back.webserver.WebServer;
+import cool.blink.examples.sessions.Sessions;
 import java.util.logging.Logger;
 
 public class Logout extends Scenario {
@@ -25,10 +27,11 @@ public class Logout extends Scenario {
     @Override
     public void main(Request request) {
         Logger.getLogger(Logout.class.getName()).log(Priority.LOWEST, "Running...");
-        Blink.getNode().getSessions().remove("test_user");
+        WebServer webServer = Container.getWebServer(Sessions.sessions.getName());
+        webServer.getSessionManager().getActiveSessions().remove("test_user");
         Response response = new Response(Status.$302, "");
         response.getHeaders().put(Response.HeaderFieldName.Location, "/examples/sessions/login");
-        Blink.getWebServer().respond(request, response);
+        webServer.respond(request, response);
     }
 
     /**

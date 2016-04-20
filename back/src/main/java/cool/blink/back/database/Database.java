@@ -1,11 +1,18 @@
 package cool.blink.back.database;
 
-import cool.blink.back.cluster.Action;
-import cool.blink.back.utilities.Logs;
-import cool.blink.back.utilities.Logs.Priority;
-import cool.blink.back.utilities.Reflections;
+import cool.blink.back.core.Environment;
+import cool.blink.back.exception.InvalidActionParameterException;
+import cool.blink.back.utilities.DateUtilities;
+import cool.blink.back.utilities.LogUtilities;
+import cool.blink.back.utilities.LogUtilities.Priority;
+import cool.blink.back.utilities.ReflectionUtilities;
+import cool.blink.back.utilities.StringUtilities;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.Blob;
@@ -19,13 +26,17 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLDataException;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
+import static java.util.Arrays.asList;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.ibatis.jdbc.ScriptRunner;
+import org.joda.time.DateTime;
 
 /**
  * API
@@ -44,6 +55,8 @@ import org.apache.commons.lang3.StringUtils;
  * <li>public final synchronized void addUnsafeTransaction(final String
  * query)</li>
  * <li>public final synchronized void executeUnsafeBatch()</li>
+ * <li>public final void execute(final Environment environment, final String
+ * driverName, final String dump)</li>
  * </ul>
  *
  * <h3>Create</h3>
@@ -53,6 +66,7 @@ import org.apache.commons.lang3.StringUtils;
  * <li>public final void createRecord(final Object object)</li>
  * <li>public final void createColumn - Will not be implemented</li>
  * <li>public final void createTable(final Class clazz)</li>
+ * <li>public final void createTable(final Column... columns)</li>
  * <li>public final void createDatabase()</li>
  * </ul>
  *
@@ -60,8 +74,8 @@ import org.apache.commons.lang3.StringUtils;
  * <br>
  * <ul>
  * <li>public final List&gt;Cell&lt; readCells - Will not be implemented</li>
- * <li>public final List&gt;Record&lt; readRecords(final Class clazz, final
- * String whereClause)</li>
+ * <li>public final List&gt;Record&lt; readRecordsForBlink(final Class clazz,
+ * final String whereClause)</li>
  * <li>public final Column readColumn - Will not be implemented</li>
  * <li>public final Table readTable(final Class clazz)</li>
  * <li>public final Boolean tableExists(final Table table)</li>
@@ -91,79 +105,215 @@ import org.apache.commons.lang3.StringUtils;
  */
 public final class Database {
 
-    private final String name;
-    private final String destination;
-    private final List<Class> tables;
+    private final DatabaseChain databaseChain;
+    private final DatabaseDetails databaseDetails;
     private final List<String> transactions;
+    private final DatabaseSocketManager socketManager;
+    private final DatabasePortScanner databasePortScanner;
+    private final ActionSynchronizer actionSynchronizer;
+    private final ActionExecutor actionExecutor;
+    private final List<Builder> builders;
     private Connection connection;
+    private Connection altConnection;
 
-    public Database(final String name, final String destination, final Class... tables) {
-        this.name = name.toLowerCase();
-
-        //Make sure destination has ending / if not blank
-        String temp;
-        if ((destination == null) || ("".equals(destination)) || (destination.isEmpty())) {
-            temp = destination;
-        } else if (destination.charAt(destination.length()) != '/') {
-            temp = destination + "/";
-        } else {
-            temp = destination;
-        }
-
-        this.destination = temp;
-        this.tables = new ArrayList<>();
+    public Database(final DatabaseChain databaseChain, final DatabaseDetails databaseDetails, final DatabaseSocketManager socketManager, final DatabasePortScanner databasePortScanner, final ActionSynchronizer actionSynchronizer, final ActionExecutor actionExecutor, final Builder... builders) {
+        this.databaseChain = databaseChain;
+        this.databaseDetails = databaseDetails;
         this.transactions = new ArrayList<>();
 
-        //Add all provided tables
-        this.tables.addAll(Arrays.asList(tables));
+        this.socketManager = socketManager;
+        this.socketManager.setDatabaseChain(databaseChain);
 
-        //Add action table
-        this.tables.add(Action.class);
+        this.databasePortScanner = databasePortScanner;
+        this.databasePortScanner.setDatabaseChain(databaseChain);
 
+        this.actionSynchronizer = actionSynchronizer;
+        this.actionSynchronizer.setDatabaseChain(databaseChain);
+
+        this.actionExecutor = actionExecutor;
+        this.actionExecutor.setDatabaseChain(databaseChain);
+
+        this.builders = asList(builders);
+    }
+
+    public void begin() {
         try {
+            //Create database
             createDatabase();
-            for (Class clazz : this.tables) {
-                createTable(clazz);
+
+            //Create action table
+            createTable(Action.class);
+
+            //Initialize datasets
+            for (Builder builder : this.builders) {
+                builder.execute();
             }
-        } catch (SQLException | ClassNotFoundException ex) {
-            Logger.getLogger(Database.class.getName()).log(Priority.HIGHEST, null, ex);
-        } catch (IllegalAccessException | IllegalArgumentException ex) {
+        } catch (ClassNotFoundException | SQLException | IllegalAccessException | IllegalArgumentException ex) {
             Logger.getLogger(Database.class.getName()).log(Priority.HIGHEST, null, ex);
         }
+        this.socketManager.start();
+        Logger.getLogger(Database.class.getName()).log(Priority.MEDIUM, "Socket Manager Started.");
+        this.databasePortScanner.start();
+        Logger.getLogger(Database.class.getName()).log(Priority.MEDIUM, "Port Scanner Started.");
+        this.actionSynchronizer.start();
+        Logger.getLogger(Database.class.getName()).log(Priority.MEDIUM, "Action Synchronizer Started.");
+        this.actionExecutor.start();
+        Logger.getLogger(Database.class.getName()).log(Priority.MEDIUM, "Action Executor Started.");
     }
 
-    public final String getName() {
-        return name;
+    public DatabaseDetails getDatabaseDetails() {
+        return databaseDetails;
     }
 
-    public final String getDestination() {
-        return destination;
+    public DatabaseChain getDatabaseChain() {
+        return databaseChain;
     }
 
-    public final List<Class> getTables() {
-        return tables;
-    }
-
-    public final List<String> getTransactions() {
+    public List<String> getTransactions() {
         return transactions;
     }
 
-    public final Connection getConnection() {
+    public DatabaseSocketManager getSocketManager() {
+        return socketManager;
+    }
+
+    public DatabasePortScanner getDatabasePortScanner() {
+        return databasePortScanner;
+    }
+
+    public ActionSynchronizer getActionSynchronizer() {
+        return actionSynchronizer;
+    }
+
+    public ActionExecutor getActionExecutor() {
+        return actionExecutor;
+    }
+
+    public List<Builder> getBuilders() {
+        return builders;
+    }
+
+    public Connection getConnection() {
         return connection;
     }
 
-    public final void setConnection(final Connection connection) {
+    public void setConnection(Connection connection) {
         this.connection = connection;
     }
 
-    public final synchronized void connect() throws ClassNotFoundException, SQLException {
-        Class.forName("org.apache.derby.jdbc.EmbeddedDriver");
-        connection = DriverManager.getConnection("jdbc:derby:" + new File(this.destination + this.name).getAbsolutePath());
+    public Connection getAltConnection() {
+        return altConnection;
     }
 
-    public final synchronized void disconnect() throws SQLException {
+    public void setAltConnection(Connection altConnection) {
+        this.altConnection = altConnection;
+    }
+
+    @SuppressWarnings({"SleepWhileInLoop", "SleepWhileHoldingLock"})
+    public final void connect() throws ClassNotFoundException, SQLException {
+        final Integer maxAttempts = 10;
+        Integer totalAttempts = 0;
+        while (this.connection != null) {
+            totalAttempts++;
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(Database.class.getName()).log(Priority.HIGHEST, null, ex);
+            }
+            if (Objects.equals(totalAttempts, maxAttempts)) {
+                Logger.getLogger(Database.class.getName()).log(Priority.HIGH, "Cannot get database connection, attempting to kill current connection.");
+                disconnect();
+                break;
+            }
+        }
+        Class.forName("org.apache.derby.jdbc.EmbeddedDriver");
+        this.connection = DriverManager.getConnection("jdbc:derby:" + new File(this.databaseChain.getDatabaseDestination() + this.databaseChain.getDatabaseName()).getAbsolutePath());
+        this.connection.setAutoCommit(false);
+    }
+
+    @SuppressWarnings({"SleepWhileInLoop", "SleepWhileHoldingLock"})
+    public final void disconnect() throws SQLException {
+        final Integer maxAttempts = 10;
+        Integer totalAttempts = 0;
         if (this.connection != null) {
-            this.connection.close();
+            try {
+                this.connection.close();
+            } catch (SQLException ex) {
+                try {
+                    this.connection.commit();
+                    this.connection.close();
+                } catch (SQLException ex1) {
+                    while (this.connection != null) {
+                        totalAttempts++;
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException ex2) {
+                            Logger.getLogger(Database.class.getName()).log(Priority.HIGHEST, null, ex2);
+                        }
+                        if (Objects.equals(totalAttempts, maxAttempts)) {
+                            Logger.getLogger(Database.class.getName()).log(Priority.HIGH, "Cannot get database connection, performing rollback and killing current connection.");
+                            this.connection.rollback();
+                            this.connection.close();
+                            break;
+                        }
+                    }
+                }
+            }
+            this.connection = null;
+        }
+    }
+
+    @SuppressWarnings({"SleepWhileInLoop", "SleepWhileHoldingLock", "SynchronizeOnNonFinalField"})
+    public final void connectForBlink() throws ClassNotFoundException, SQLException {
+        final Integer maxAttempts = 10;
+        Integer totalAttempts = 0;
+        while (this.altConnection != null) {
+            totalAttempts++;
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(Database.class.getName()).log(Priority.HIGHEST, null, ex);
+            }
+            if (Objects.equals(totalAttempts, maxAttempts)) {
+                Logger.getLogger(Database.class.getName()).log(Priority.HIGH, "Cannot get database connection, attempting to kill current connection.");
+                disconnectForBlink();
+                break;
+            }
+        }
+        Class.forName("org.apache.derby.jdbc.EmbeddedDriver");
+        this.altConnection = DriverManager.getConnection("jdbc:derby:" + new File(this.databaseChain.getDatabaseDestination() + this.databaseChain.getDatabaseName()).getAbsolutePath());
+        this.altConnection.setAutoCommit(false);
+    }
+
+    @SuppressWarnings({"SynchronizeOnNonFinalField", "SleepWhileInLoop", "SleepWhileHoldingLock"})
+    public final void disconnectForBlink() throws SQLException {
+        final Integer maxAttempts = 10;
+        Integer totalAttempts = 0;
+        if (this.altConnection != null) {
+            try {
+                this.altConnection.close();
+            } catch (SQLException ex) {
+                try {
+                    this.altConnection.commit();
+                    this.altConnection.close();
+                } catch (SQLException ex1) {
+                    while (this.altConnection != null) {
+                        totalAttempts++;
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException ex2) {
+                            Logger.getLogger(Database.class.getName()).log(Priority.HIGHEST, null, ex2);
+                        }
+                        if (Objects.equals(totalAttempts, maxAttempts)) {
+                            Logger.getLogger(Database.class.getName()).log(Priority.HIGH, "Cannot get database connection, performing rollback and killing current connection.");
+                            this.altConnection.rollback();
+                            this.altConnection.close();
+                            break;
+                        }
+                    }
+                }
+            }
+            this.altConnection = null;
         }
     }
 
@@ -302,6 +452,14 @@ public final class Database {
         disconnect();
     }
 
+    public final void unsafeExecuteForBlink(final String sql) throws ClassNotFoundException, SQLException {
+        connectForBlink();
+        try (Statement statement = this.altConnection.createStatement()) {
+            statement.execute(sql);
+        }
+        disconnectForBlink();
+    }
+
     public final void execute(final PreparedEntry preparedEntry) throws ClassNotFoundException, SQLException {
         Integer totalPlaceholders = StringUtils.countMatches(preparedEntry.getSql(), "?");
         if (totalPlaceholders != preparedEntry.getParameters().size()) {
@@ -333,76 +491,20 @@ public final class Database {
         disconnect();
     }
 
-    public final synchronized void addUnsafeTransaction(final String query) {
-        this.transactions.add(query);
-    }
-
-    public final synchronized void executeUnsafeBatch() throws ClassNotFoundException, SQLException {
-        try (Connection tempConnection = DriverManager.getConnection("jdbc:derby:" + new File(this.destination + this.name).getAbsolutePath())) {
-            Statement statement = tempConnection.createStatement();
-            tempConnection.setAutoCommit(false);
-            for (String transaction : this.transactions) {
-                statement.addBatch(transaction);
-            }
-            statement.executeBatch();
-            tempConnection.commit();
+    public final synchronized void executeForBlink(final PreparedEntry preparedEntry) throws ClassNotFoundException, SQLException {
+        Integer totalPlaceholders = StringUtils.countMatches(preparedEntry.getSql(), "?");
+        if (totalPlaceholders != preparedEntry.getParameters().size()) {
+            throw new SQLDataException("Incorrect number of parameters allocated for provided sql statement");
         }
-    }
-
-    public final void createRecord(final Object object) throws ClassNotFoundException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SQLException {
-        //Get parameters
-        List<Parameter> parameters = new ArrayList<>();
-        List<Field> fields = Reflections.classToFieldsList(object.getClass());
-        for (int i = 1; i < fields.size() + 1; i++) {
-            if (!fields.get(i - 1).getName().equalsIgnoreCase("id")) {
-                Integer placeholderIndex = parameters.size() + 1;
-                Object value = PropertyUtils.getProperty(object, fields.get(i - 1).getName());
-                Class type = fields.get(i - 1).getType();
-                Parameter parameter = new Parameter(placeholderIndex, value, type);
-                parameters.add(parameter);
-            }
-        }
-
-        //Set column names
-        Integer totalCols = 0;
-        String preparedSql = "INSERT INTO " + object.getClass().getSimpleName().toUpperCase() + "(";
-        for (int i = 1; i < fields.size() + 1; i++) {
-            if (!fields.get(i - 1).getName().equalsIgnoreCase("id")) {
-                preparedSql += fields.get(i - 1).getName();
-                totalCols++;
-                if (fields.size() > i) {
-                    preparedSql += ",";
-                }
-            }
-        }
-        preparedSql += ")";
-
-        //Set column values
-        preparedSql += " " + "VALUES(";
-        for (int i = 0; i < totalCols; i++) {
-            if (i + 1 < totalCols) {
-                preparedSql += "?,";
-            } else {
-                preparedSql += "?)";
-            }
-        }
-
-        //Execute preparedSql
-        connect();
-        PreparedStatement preparedStatement = this.connection.prepareStatement(preparedSql);
-
-        //Assign parameters to prepared statement
-        for (Parameter parameter : parameters) {
+        connectForBlink();
+        PreparedStatement preparedStatement = this.connection.prepareStatement(preparedEntry.getSql());
+        for (Parameter parameter : preparedEntry.getParameters()) {
             switch (parameter.getType().getSimpleName().toLowerCase()) {
                 case "string":
                     preparedStatement.setString(parameter.getPlaceholderIndex(), (String) parameter.getValue());
                     break;
                 case "integer":
-                    if ((Integer) parameter.getValue() == null) {
-                        //Do nothing - this will cause a primary key to auto-increment in most cases or reflect a null in all the others
-                    } else {
-                        preparedStatement.setInt(parameter.getPlaceholderIndex(), (Integer) parameter.getValue());
-                    }
+                    preparedStatement.setInt(parameter.getPlaceholderIndex(), (Integer) parameter.getValue());
                     break;
                 case "date":
                     preparedStatement.setDate(parameter.getPlaceholderIndex(), (Date) parameter.getValue());
@@ -417,14 +519,152 @@ public final class Database {
         }
         preparedStatement.executeUpdate();
         preparedStatement.closeOnCompletion();
+        disconnectForBlink();
+    }
+
+    public final synchronized void addUnsafeTransaction(final String query) {
+        this.transactions.add(query);
+    }
+
+    public final synchronized void executeUnsafeBatch() throws ClassNotFoundException, SQLException {
+        try (Connection tempConnection = DriverManager.getConnection("jdbc:derby:" + new File(this.databaseChain.getDatabaseDestination() + this.databaseChain.getDatabaseName()).getAbsolutePath())) {
+            Statement statement = tempConnection.createStatement();
+            tempConnection.setAutoCommit(false);
+            for (String transaction : this.transactions) {
+                statement.addBatch(transaction);
+            }
+            statement.executeBatch();
+            tempConnection.commit();
+        }
+    }
+
+    public final synchronized void execute(final Environment environment, final String driverName, final String dump) throws ClassNotFoundException, FileNotFoundException, SQLException {
+        Class.forName(driverName);
+        Connection connection1 = DriverManager.getConnection(environment.getUrl(), environment.getUsername(), environment.getPassword());
+        ScriptRunner scriptRunner = new ScriptRunner(connection1);
+        scriptRunner.setLogWriter(null);
+        StringReader stringReader = new StringReader(dump);
+        Reader reader = new BufferedReader(stringReader);
+        scriptRunner.runScript(reader);
+    }
+
+    /**
+     * This method must be invoked after every database write event in order to
+     * sync this event across all other databases in the cluster
+     *
+     * @param action action
+     * @throws ClassNotFoundException ClassNotFoundException
+     * @throws SQLException SQLException
+     */
+    public final void persistAction(final Action action) throws ClassNotFoundException, SQLException {
+        connect();
+        PreparedStatement preparedStatement;
+        preparedStatement = this.connection.prepareStatement("INSERT INTO ACTION (CREATIONTIME,DATABASEID,FORWARDSTATEMENT,ROLLBACKSTATEMENT,TIMEOFEXECUTION) VALUES(?,?,?,?,?)");
+        preparedStatement.setLong(1, action.getCreationTime());
+        preparedStatement.setString(2, action.getDatabaseId());
+        preparedStatement.setString(3, action.getForwardStatement());
+        preparedStatement.setString(4, action.getRollbackStatement());
+        Long timeOfExecution;
+        if (action.getTimeOfExecution() == null) {
+            timeOfExecution = System.currentTimeMillis();
+        } else {
+            timeOfExecution = action.getTimeOfExecution();
+        }
+        preparedStatement.setLong(5, timeOfExecution);
+        preparedStatement.executeUpdate();
         disconnect();
+    }
+
+    public final void createRecord(final Object object) throws ClassNotFoundException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SQLException {
+        //Generate reflection data from object
+        List<Field> fields = ReflectionUtilities.classToFieldsList(object.getClass());
+        List<Parameter> parameters = new ArrayList<>();
+        for (int i = 1; i < fields.size() + 1; i++) {
+            Integer placeholderIndex = parameters.size() + 1;
+            Object value = PropertyUtils.getProperty(object, fields.get(i - 1).getName());
+            Class type = fields.get(i - 1).getType();
+            Parameter parameter = new Parameter(placeholderIndex, value, type);
+            parameters.add(parameter);
+        }
+
+        //Create forward statement
+        String forward = "INSERT INTO " + object.getClass().getSimpleName().toUpperCase() + "(";
+        for (int i = 1; i < fields.size() + 1; i++) {
+            fields.get(i - 1).setAccessible(true);
+            forward += fields.get(i - 1).getName();
+            if (fields.size() > i) {
+                forward += ",";
+            }
+        }
+        forward += ") VALUES(";
+        for (int i = 0; i < fields.size(); i++) {
+            fields.get(i).setAccessible(true);
+            Parameter parameter = parameters.get(i);
+            switch (parameter.getType().getSimpleName().toLowerCase()) {
+                case "string":
+                    forward += "'" + StringUtilities.escapeDerby(fields.get(i).get(object).toString()) + "'";
+                    break;
+                case "integer":
+                    forward += StringUtilities.escapeDerby(fields.get(i).get(object).toString());
+                    break;
+                case "date":
+                    forward += "'" + StringUtilities.escapeDerby(fields.get(i).get(object).toString()) + "'";
+                    break;
+                case "long":
+                    forward += StringUtilities.escapeDerby(fields.get(i).get(object).toString());
+                    break;
+                default:
+                    forward += "'" + StringUtilities.escapeDerby(fields.get(i).get(object).toString()) + "'";
+                    break;
+            }
+            if (fields.size() > i + 1) {
+                forward += ",";
+            } else {
+                forward += ")";
+            }
+        }
+
+        //Create rollback statement
+        String rollback = "DELETE FROM " + object.getClass().getSimpleName().toUpperCase() + " WHERE ";
+        for (int i = 0; i < fields.size(); i++) {
+            fields.get(i).setAccessible(true);
+            Parameter parameter = parameters.get(i);
+            switch (parameter.getType().getSimpleName().toLowerCase()) {
+                case "string":
+                    rollback += fields.get(i).getName() + " = " + "'" + StringUtilities.escapeDerby(fields.get(i).get(object).toString()) + "'";
+                    break;
+                case "integer":
+                    rollback += fields.get(i).getName() + " = " + StringUtilities.escapeDerby(fields.get(i).get(object).toString());
+                    break;
+                case "date":
+                    rollback += fields.get(i).getName() + " = " + "'" + StringUtilities.escapeDerby(fields.get(i).get(object).toString()) + "'";
+                    break;
+                case "long":
+                    rollback += fields.get(i).getName() + " = " + StringUtilities.escapeDerby(fields.get(i).get(object).toString());
+                    break;
+                default:
+                    rollback += fields.get(i).getName() + " = " + "'" + StringUtilities.escapeDerby(fields.get(i).get(object).toString()) + "'";
+                    break;
+            }
+            if (fields.size() > i + 1) {
+                rollback += " AND ";
+            }
+        }
+
+        unsafeExecute(forward);
+
+        try {
+            persistAction(new Action(System.currentTimeMillis(), this.getDatabaseDetails().getId(), forward, rollback));
+        } catch (InvalidActionParameterException ex) {
+            Logger.getLogger(Database.class.getName()).log(Priority.HIGHEST, null, ex);
+        }
     }
 
     public final void createTable(final Class clazz) throws ClassNotFoundException, SQLException, IllegalAccessException, IllegalArgumentException {
         Table table = new Table(clazz.getSimpleName());
 
         //Generate the column classes for clazz
-        List<Field> classFields = Reflections.classToFieldsList(clazz);
+        List<Field> classFields = ReflectionUtilities.classToFieldsList(clazz);
         Column column;
         List<Column> columns = new ArrayList<>();
         for (Field field : classFields) {
@@ -432,7 +672,6 @@ public final class Database {
             SqlDataType sqlDataType = sqlDataMapper(field.getType());
             Integer length = null;
             if (sqlDataType.equals(SqlDataType.VARCHAR)) {
-                //30 varchar length by default
                 length = ColumnDefaults.getDefaultVarcharLength();
             }
             //Primary Key by default if the field name is "id"
@@ -444,6 +683,47 @@ public final class Database {
         }
 
         table.getColumns().addAll(columns);
+        if (tableExists(table)) {
+            Logger.getLogger(Database.class.getName()).log(Priority.HIGH, "{0} table already exists.", clazz.getSimpleName());
+        } else {
+            //Create the table in the physical database
+            String createStatement = "CREATE TABLE ";
+            Column primaryKey = null;
+            SqlDataType sqlDataType;
+            createStatement += table.getName() + "(";
+            for (int i = 0; i < table.getColumns().size(); i++) {
+                createStatement += table.getColumns().get(i).getName();
+                sqlDataType = table.getColumns().get(i).getSqlDataType();
+                createStatement += " " + sqlDataType;
+                if ((table.getColumns().get(i).getLength() != null) && (sqlDataType != SqlDataType.BIGINT)) {
+                    createStatement += (table.getColumns().get(i).getLength() == null ? "" : " " + "(" + table.getColumns().get(i).getLength() + ")");
+                }
+                createStatement += (table.getColumns().get(i).getNotNull() == true ? " " + "NOT NULL" : "");
+                if (table.getColumns().get(i).getPrimaryKey() == true) {
+                    primaryKey = table.getColumns().get(i);
+                    createStatement += " " + "GENERATED BY DEFAULT AS IDENTITY (START WITH 1, INCREMENT BY 1)";
+                }
+                if (i == table.getColumns().size() - 1) {
+                    if (primaryKey != null) {
+                        createStatement += ", PRIMARY KEY (" + primaryKey.getName() + ")";
+                    }
+                } else {
+                    createStatement += ", ";
+                }
+            }
+            createStatement += ")";
+            execute(new PreparedEntry(createStatement));
+            if (tableExists(table)) {
+                Logger.getLogger(Database.class.getName()).log(Priority.MEDIUM, "{0} table has been created.", clazz.getSimpleName());
+            } else {
+                Logger.getLogger(Database.class.getName()).log(Priority.HIGH, "There was a problem while attempting to create a physical table titled {0}.", clazz.getSimpleName());
+            }
+        }
+    }
+
+    public final void createTable(final Class clazz, final Column... columns) throws ClassNotFoundException, SQLException {
+        Table temp = new Table(clazz.getSimpleName());
+        Table table = new Table(temp.getName(), temp.getSchema(), temp.getName(), temp.getType(), temp.getRemarks(), temp.getDatabase(), asList(columns), temp.getRecords());
         if (tableExists(table)) {
             Logger.getLogger(Database.class.getName()).log(Priority.HIGH, "{0} table already exists.", clazz.getSimpleName());
         } else {
@@ -484,14 +764,14 @@ public final class Database {
 
     public final void createDatabase() throws SQLException {
         if (databaseExists()) {
-            Logger.getLogger(Database.class.getName()).log(Logs.Priority.HIGH, "Database already exists in {0}/{1}, this database will be used.", new Object[]{new File(this.getDestination()).getAbsolutePath(), this.getName()});
+            Logger.getLogger(Database.class.getName()).log(LogUtilities.Priority.HIGH, "Database already exists in {0}/{1}, this database will be used.", new Object[]{new File(this.databaseChain.getDatabaseDestination()).getAbsolutePath(), this.databaseChain.getDatabaseName()});
         } else {
-            this.connection = DriverManager.getConnection("jdbc:derby:" + this.getDestination() + this.getName() + ";" + "create=true");
+            this.connection = DriverManager.getConnection("jdbc:derby:" + this.databaseChain.getDatabaseDestination() + this.databaseChain.getDatabaseName() + ";" + "create=true");
             disconnect();
             if (databaseExists()) {
-                Logger.getLogger(Database.class.getName()).log(Logs.Priority.MEDIUM, "Database created in {0}/{1}", new Object[]{this.getDestination(), this.getName()});
+                Logger.getLogger(Database.class.getName()).log(LogUtilities.Priority.MEDIUM, "Database created in {0}/{1}", new Object[]{this.databaseChain.getDatabaseDestination(), this.databaseChain.getDatabaseName()});
             } else {
-                Logger.getLogger(Database.class.getName()).log(Logs.Priority.HIGH, "There was a problem while attempting to create the physical database.");
+                Logger.getLogger(Database.class.getName()).log(LogUtilities.Priority.HIGH, "There was a problem while attempting to create the physical database.");
             }
         }
     }
@@ -578,16 +858,16 @@ public final class Database {
         return records;
     }
 
-    public final List<Record> readRecords(final Class clazz, final PreparedEntry preparedEntry) throws ClassNotFoundException, SQLException, InterruptedException {
+    public final synchronized List<Record> readRecordsForBlink(final Class clazz, final PreparedEntry preparedEntry) throws ClassNotFoundException, SQLException, InterruptedException {
         Table table = new Table(clazz.getSimpleName());
         Integer totalPlaceholders = StringUtils.countMatches(preparedEntry.getSql(), "?");
         if (totalPlaceholders != preparedEntry.getParameters().size()) {
             throw new SQLDataException("Incorrect number of parameters allocated for provided sql statement");
         }
-        connect();
+        connectForBlink();
 
         //Assign parameters to preparedSql
-        PreparedStatement preparedStatement = this.connection.prepareStatement(preparedEntry.getSql());
+        PreparedStatement preparedStatement = this.altConnection.prepareStatement(preparedEntry.getSql());
         for (Parameter parameter : preparedEntry.getParameters()) {
             switch (parameter.getType().getSimpleName().toLowerCase()) {
                 case "string":
@@ -598,6 +878,12 @@ public final class Database {
                     break;
                 case "date":
                     preparedStatement.setDate(parameter.getPlaceholderIndex(), (Date) parameter.getValue());
+                    break;
+                case "datetime":
+                    preparedStatement.setTimestamp(parameter.getPlaceholderIndex(), DateUtilities.convert((DateTime) parameter.getValue()));
+                    break;
+                case "long":
+                    preparedStatement.setLong(parameter.getPlaceholderIndex(), (Long) parameter.getValue());
                     break;
                 default:
                     throw new SQLDataException("Invalid parameter type: " + parameter.toString());
@@ -633,8 +919,104 @@ public final class Database {
                     object = resultSet.getString(resultSetMetaData.getColumnName(i + 1));
                 } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof Integer) {
                     object = resultSet.getInt(resultSetMetaData.getColumnName(i + 1));
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof Long) {
+                    object = resultSet.getLong(resultSetMetaData.getColumnName(i + 1));
                 } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof Date) {
                     object = resultSet.getDate(resultSetMetaData.getColumnName(i + 1));
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof Timestamp) {
+                    object = resultSet.getTimestamp(resultSetMetaData.getColumnName(i + 1));
+                } else {
+                    object = resultSet.getBlob(resultSetMetaData.getColumnName(i + 1));
+                }
+                cells.add(new Cell(null, (Column) columns.get(i), object));
+            }
+        }
+
+        //Organize record data and assign records to cells and cells to records
+        List<Record> records = new ArrayList<>();
+        Record record = new Record(table);
+        for (int i = 0; i < cells.size(); i++) {
+            if (i % resultSetMetaData.getColumnCount() == 0) {
+                record = new Record(table);
+            }
+            record.getCells().add(cells.get(i));
+            cells.get(i).setRecord(record);
+            records.remove(record);
+            records.add(record);
+        }
+
+        preparedStatement.closeOnCompletion();
+        disconnectForBlink();
+        return records;
+    }
+
+    public final List<Record> readRecords(final Class clazz, final PreparedEntry preparedEntry) throws ClassNotFoundException, SQLException, InterruptedException {
+        Table table = new Table(clazz.getSimpleName());
+        Integer totalPlaceholders = StringUtils.countMatches(preparedEntry.getSql(), "?");
+        if (totalPlaceholders != preparedEntry.getParameters().size()) {
+            throw new SQLDataException("Incorrect number of parameters allocated for provided sql statement");
+        }
+        connect();
+
+        //Assign parameters to preparedSql
+        PreparedStatement preparedStatement = this.connection.prepareStatement(preparedEntry.getSql());
+        for (Parameter parameter : preparedEntry.getParameters()) {
+            switch (parameter.getType().getSimpleName().toLowerCase()) {
+                case "string":
+                    preparedStatement.setString(parameter.getPlaceholderIndex(), (String) parameter.getValue());
+                    break;
+                case "integer":
+                    preparedStatement.setInt(parameter.getPlaceholderIndex(), (Integer) parameter.getValue());
+                    break;
+                case "date":
+                    preparedStatement.setDate(parameter.getPlaceholderIndex(), (Date) parameter.getValue());
+                    break;
+                case "datetime":
+                    preparedStatement.setTimestamp(parameter.getPlaceholderIndex(), DateUtilities.convert((DateTime) parameter.getValue()));
+                    break;
+                case "long":
+                    preparedStatement.setLong(parameter.getPlaceholderIndex(), (Long) parameter.getValue());
+                    break;
+                default:
+                    throw new SQLDataException("Invalid parameter type: " + parameter.toString());
+            }
+        }
+
+        //Run query
+        ResultSet resultSet = preparedStatement.executeQuery();
+
+        //Get column data
+        List<Column> columns = new ArrayList<>();
+        ResultSetMetaData columnMeta = resultSet.getMetaData();
+        Integer columnCount = columnMeta.getColumnCount();
+        for (int i = 0; i < columnCount; i++) {
+            String columnName = columnMeta.getColumnName(i + 1);
+            SqlDataType sqlDataType = sqlDataTypeMapper((columnMeta.getColumnTypeName(i + 1)));
+            Integer columnLength = columnMeta.getPrecision(i + 1);
+            Boolean columnPrimaryKey = columnMeta.isAutoIncrement(i + 1);
+            Boolean columnNotNull = columnMeta.isNullable(i + 1) == 0;
+            columns.add(new Column(columnName, sqlDataType, columnLength, columnPrimaryKey, columnNotNull, table));
+        }
+
+        //Get record data from resultSet
+        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+        List<Cell> cells = new ArrayList<>();
+        while (resultSet.next()) {
+            //Get object data
+            for (int i = 0; i < resultSetMetaData.getColumnCount(); i++) {
+                Object object;
+                if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) == null) {
+                    object = null;
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof String) {
+                    object = resultSet.getString(resultSetMetaData.getColumnName(i + 1));
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof Integer) {
+                    object = resultSet.getInt(resultSetMetaData.getColumnName(i + 1));
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof Long) {
+                    object = resultSet.getLong(resultSetMetaData.getColumnName(i + 1));
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof Date) {
+                    object = resultSet.getDate(resultSetMetaData.getColumnName(i + 1));
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof Timestamp) {
+                    object = resultSet.getTimestamp(resultSetMetaData.getColumnName(i + 1));
                 } else {
                     object = resultSet.getBlob(resultSetMetaData.getColumnName(i + 1));
                 }
@@ -656,6 +1038,98 @@ public final class Database {
 
         preparedStatement.closeOnCompletion();
         disconnect();
+        return records;
+    }
+
+    public final List<Record> readRecordsForBlink(final Class clazz, final PreparedEntry preparedEntry, final Integer limit) throws ClassNotFoundException, SQLException, InterruptedException {
+        Table table = new Table(clazz.getSimpleName());
+        Integer totalPlaceholders = StringUtils.countMatches(preparedEntry.getSql(), "?");
+        if (totalPlaceholders != preparedEntry.getParameters().size()) {
+            throw new SQLDataException("Incorrect number of parameters allocated for provided sql statement");
+        }
+        connectForBlink();
+
+        //Assign parameters to preparedSql
+        PreparedStatement preparedStatement = this.altConnection.prepareStatement(preparedEntry.getSql());
+        for (Parameter parameter : preparedEntry.getParameters()) {
+            switch (parameter.getType().getSimpleName().toLowerCase()) {
+                case "string":
+                    preparedStatement.setString(parameter.getPlaceholderIndex(), (String) parameter.getValue());
+                    break;
+                case "integer":
+                    preparedStatement.setInt(parameter.getPlaceholderIndex(), (Integer) parameter.getValue());
+                    break;
+                case "date":
+                    preparedStatement.setDate(parameter.getPlaceholderIndex(), (Date) parameter.getValue());
+                    break;
+                case "datetime":
+                    preparedStatement.setTimestamp(parameter.getPlaceholderIndex(), DateUtilities.convert((DateTime) parameter.getValue()));
+                    break;
+                case "long":
+                    preparedStatement.setLong(parameter.getPlaceholderIndex(), (Long) parameter.getValue());
+                    break;
+                default:
+                    throw new SQLDataException("Invalid parameter type: " + parameter.toString());
+            }
+        }
+
+        //Run query
+        preparedStatement.setMaxRows(limit);
+        ResultSet resultSet = preparedStatement.executeQuery();
+
+        //Get column data
+        List<Column> columns = new ArrayList<>();
+        ResultSetMetaData columnMeta = resultSet.getMetaData();
+        Integer columnCount = columnMeta.getColumnCount();
+        for (int i = 0; i < columnCount; i++) {
+            String columnName = columnMeta.getColumnName(i + 1);
+            SqlDataType sqlDataType = sqlDataTypeMapper((columnMeta.getColumnTypeName(i + 1)));
+            Integer columnLength = columnMeta.getPrecision(i + 1);
+            Boolean columnPrimaryKey = columnMeta.isAutoIncrement(i + 1);
+            Boolean columnNotNull = columnMeta.isNullable(i + 1) == 0;
+            columns.add(new Column(columnName, sqlDataType, columnLength, columnPrimaryKey, columnNotNull, table));
+        }
+
+        //Get record data from resultSet
+        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+        List<Cell> cells = new ArrayList<>();
+        while (resultSet.next()) {
+            //Get object data
+            for (int i = 0; i < resultSetMetaData.getColumnCount(); i++) {
+                Object object;
+                if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) == null) {
+                    object = null;
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof String) {
+                    object = resultSet.getString(resultSetMetaData.getColumnName(i + 1));
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof Integer) {
+                    object = resultSet.getInt(resultSetMetaData.getColumnName(i + 1));
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof Long) {
+                    object = resultSet.getLong(resultSetMetaData.getColumnName(i + 1));
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof Date) {
+                    object = resultSet.getDate(resultSetMetaData.getColumnName(i + 1));
+                } else if (resultSet.getObject(resultSetMetaData.getColumnName(i + 1)) instanceof Timestamp) {
+                    object = resultSet.getTimestamp(resultSetMetaData.getColumnName(i + 1));
+                } else {
+                    object = resultSet.getBlob(resultSetMetaData.getColumnName(i + 1));
+                }
+                cells.add(new Cell(null, (Column) columns.get(i), object));
+            }
+        }
+
+        //Organize record data and assign records to cells and cells to records
+        List<Record> records = new ArrayList<>();
+        Record record = new Record(table);
+        for (int i = 0; i < cells.size(); i++) {
+            if (i % resultSetMetaData.getColumnCount() == 0) {
+                record = new Record(table);
+            }
+            record.getCells().add(cells.get(i));
+            cells.get(i).setRecord(record);
+            records.add(record);
+        }
+
+        preparedStatement.closeOnCompletion();
+        disconnectForBlink();
         return records;
     }
 
@@ -705,12 +1179,13 @@ public final class Database {
         }
     }
 
-    public final Boolean tableExists(final Table table) throws SQLException, ClassNotFoundException {
+    public final synchronized Boolean tableExists(final Table table) throws SQLException, ClassNotFoundException {
         connect();
         DatabaseMetaData databaseMetaData = this.connection.getMetaData();
         ResultSet resultSet = databaseMetaData.getTables(null, null, "%", null);
         while (resultSet.next()) {
             if (resultSet.getString("TABLE_NAME").equalsIgnoreCase(table.getName())) {
+                disconnect();
                 return true;
             }
         }
@@ -719,7 +1194,7 @@ public final class Database {
     }
 
     public final Boolean databaseExists() {
-        File databaseFolder = new File(this.getDestination() + this.getName());
+        File databaseFolder = new File(this.databaseChain.getDatabaseDestination() + this.databaseChain.getDatabaseName());
         return databaseFolder.exists();
     }
 
@@ -738,9 +1213,10 @@ public final class Database {
 
     public final void deleteDatabase() throws IOException, SQLException {
         disconnect();
-        File databaseLog = new File(this.destination + "derby.log");
+        File databaseLog = new File(this.databaseChain.getDatabaseDestination() + "derby.log");
         databaseLog.delete();
-        File database = new File(this.destination + this.name);
+        File database = new File(this.databaseChain.getDatabaseDestination() + this.databaseChain.getDatabaseName());
         FileUtils.deleteDirectory(database);
     }
+
 }

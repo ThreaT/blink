@@ -1,17 +1,16 @@
 package cool.blink.site.search.read;
 
-import cool.blink.back.core.Report;
-import cool.blink.back.core.Request;
-import cool.blink.back.core.Scenario;
-import cool.blink.back.core.Blink;
-import cool.blink.back.core.Response;
-import cool.blink.back.core.Response.Status;
-import cool.blink.back.core.Url;
+import cool.blink.back.webserver.Report;
+import cool.blink.back.webserver.Request;
+import cool.blink.back.webserver.Scenario;
+import cool.blink.back.webserver.Response;
+import cool.blink.back.webserver.Response.Status;
+import cool.blink.back.webserver.Url;
 import cool.blink.back.search.Query;
 import cool.blink.back.search.Result;
 import cool.blink.back.search.Score;
-import cool.blink.back.utilities.Logs.Priority;
-import cool.blink.back.utilities.Longs;
+import cool.blink.back.utilities.LogUtilities.Priority;
+import cool.blink.back.utilities.LongUtilities;
 import cool.blink.front.Document;
 import cool.blink.front.html.Text;
 import cool.blink.front.html.attribute.Onclick;
@@ -30,7 +29,7 @@ import cool.blink.front.html.property.value.CursorValue;
 import cool.blink.front.html.property.value.FontSizeValue;
 import cool.blink.front.html.property.value.HeightValue;
 import cool.blink.front.html.property.value.WidthValue;
-import cool.blink.site.Application;
+import cool.blink.site.Site;
 import cool.blink.site.home.read.Home;
 import java.util.List;
 import java.util.logging.Logger;
@@ -52,8 +51,8 @@ public class Search extends Scenario {
     @Override
     public void main(Request request) {
         Logger.getLogger(Search.class.getName()).log(Priority.LOWEST, "Running main: {0}", this.toString());
-        Response response = new SearchTemplate(new Query(Longs.generateUniqueId(), request.getParameters().get("query"))).getResponse();
-        Application.getWebServer().respond(request, response);
+        Response response = new SearchTemplate(new Query(LongUtilities.generateUniqueTimeInMillis(), request.getParameters().get("query"))).getResponse();
+        Site.site.getWebServer().respond(request, response);
     }
 
     /**
@@ -104,7 +103,7 @@ public class Search extends Scenario {
             this.document = searchTemplate.getDocument();
             this.score = searchTemplate.getScore();
             this.query = query;
-            this.bestResults = searchTemplate.getScore().findBestResults(this.query, Blink.getResults(), 3, 10);
+            this.bestResults = searchTemplate.getScore().findBestResults(this.query, Site.results, 3, 10);
             Div tempResultsBox = searchTemplate.getResultsBox();
             for (Result result : this.getBestResults()) {
                 String url = "";

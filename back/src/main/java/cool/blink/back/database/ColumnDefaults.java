@@ -11,7 +11,7 @@ public final class ColumnDefaults {
     }
 
     public static final Integer getDefaultVarcharLength() {
-        return 30;
+        return 10000;
     }
 
 }
