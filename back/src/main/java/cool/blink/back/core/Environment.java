@@ -1,5 +1,7 @@
 package cool.blink.back.core;
 
+import java.io.File;
+
 public final class Environment {
 
     private final String name;
@@ -9,13 +11,50 @@ public final class Environment {
     private Integer port;
     private String additionalField1;
     private String additionalField2;
-    private String additionalField3;
+    private File additionalField3;
+
+    public Environment(final String name, final String url) {
+        this.name = name;
+        this.url = url;
+        this.username = null;
+        this.password = null;
+        this.port = null;
+        this.additionalField1 = null;
+        this.additionalField2 = null;
+        this.additionalField3 = null;
+    }
+
+    public Environment(final String name, final String url, final File additionalField3) {
+        this.name = name;
+        this.url = url;
+        this.username = null;
+        this.password = null;
+        this.port = null;
+        this.additionalField1 = null;
+        this.additionalField2 = null;
+        this.additionalField3 = additionalField3;
+    }
+
+    public Environment(final String name, final String username, final String password) {
+        this.name = name;
+        this.url = null;
+        this.username = username;
+        this.password = password;
+        this.port = null;
+        this.additionalField1 = null;
+        this.additionalField2 = null;
+        this.additionalField3 = null;
+    }
 
     public Environment(final String name, final String url, final String username, final String password) {
         this.name = name;
         this.url = url;
         this.username = username;
         this.password = password;
+        this.port = null;
+        this.additionalField1 = null;
+        this.additionalField2 = null;
+        this.additionalField3 = null;
     }
 
     public Environment(final String name, final String url, final String username, final String password, final String additionalField1) {
@@ -23,7 +62,32 @@ public final class Environment {
         this.url = url;
         this.username = username;
         this.password = password;
+        this.port = null;
         this.additionalField1 = additionalField1;
+        this.additionalField2 = null;
+        this.additionalField3 = null;
+    }
+
+    public Environment(final String name, final String url, final String username, final String password, final String additionalField1, final File additionalField3) {
+        this.name = name;
+        this.url = url;
+        this.username = username;
+        this.password = password;
+        this.port = null;
+        this.additionalField1 = additionalField1;
+        this.additionalField2 = null;
+        this.additionalField3 = additionalField3;
+    }
+
+    public Environment(final String name, final String url, final String username, final String password, final File additionalField3) {
+        this.name = name;
+        this.url = url;
+        this.username = username;
+        this.password = password;
+        this.port = null;
+        this.additionalField1 = null;
+        this.additionalField2 = null;
+        this.additionalField3 = additionalField3;
     }
 
     public Environment(final String name, final String url, final String username, final String password, final String additionalField1, final String additionalField2) {
@@ -31,15 +95,18 @@ public final class Environment {
         this.url = url;
         this.username = username;
         this.password = password;
+        this.port = null;
         this.additionalField1 = additionalField1;
         this.additionalField2 = additionalField2;
+        this.additionalField3 = null;
     }
 
-    public Environment(final String name, final String url, final String username, final String password, final String additionalField1, final String additionalField2, final String additionalField3) {
+    public Environment(final String name, final String url, final String username, final String password, final String additionalField1, final String additionalField2, final File additionalField3) {
         this.name = name;
         this.url = url;
         this.username = username;
         this.password = password;
+        this.port = null;
         this.additionalField1 = additionalField1;
         this.additionalField2 = additionalField2;
         this.additionalField3 = additionalField3;
@@ -51,6 +118,9 @@ public final class Environment {
         this.username = username;
         this.password = password;
         this.port = port;
+        this.additionalField1 = null;
+        this.additionalField2 = null;
+        this.additionalField3 = null;
     }
 
     public Environment(final String name, final String url, final String username, final String password, final Integer port, final String additionalField1) {
@@ -60,6 +130,19 @@ public final class Environment {
         this.password = password;
         this.port = port;
         this.additionalField1 = additionalField1;
+        this.additionalField2 = null;
+        this.additionalField3 = null;
+    }
+
+    public Environment(final String name, final String url, final String username, final String password, final Integer port, final String additionalField1, final File additionalField3) {
+        this.name = name;
+        this.url = url;
+        this.username = username;
+        this.password = password;
+        this.port = port;
+        this.additionalField1 = additionalField1;
+        this.additionalField2 = null;
+        this.additionalField3 = additionalField3;
     }
 
     public Environment(final String name, final String url, final String username, final String password, final Integer port, final String additionalField1, final String additionalField2) {
@@ -70,9 +153,10 @@ public final class Environment {
         this.port = port;
         this.additionalField1 = additionalField1;
         this.additionalField2 = additionalField2;
+        this.additionalField3 = null;
     }
 
-    public Environment(final String name, final String url, final String username, final String password, final Integer port, final String additionalField1, final String additionalField2, final String additionalField3) {
+    public Environment(final String name, final String url, final String username, final String password, final Integer port, final String additionalField1, final String additionalField2, final File additionalField3) {
         this.name = name;
         this.url = url;
         this.username = username;
@@ -134,11 +218,11 @@ public final class Environment {
         this.additionalField2 = additionalField2;
     }
 
-    public String getAdditionalField3() {
+    public File getAdditionalField3() {
         return additionalField3;
     }
 
-    public void setAdditionalField3(String additionalField3) {
+    public void setAdditionalField3(File additionalField3) {
         this.additionalField3 = additionalField3;
     }
 

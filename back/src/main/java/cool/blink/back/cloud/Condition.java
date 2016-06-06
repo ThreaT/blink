@@ -65,7 +65,6 @@ public final class Condition {
     }
 
     public final void compare() {
-        System.out.println("Output from last operation: " + this.output);
         switch (this.comparator) {
             case MORE_THAN:
                 this.result = (Integer) this.output > (Integer) this.output;

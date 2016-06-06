@@ -6,9 +6,9 @@ public final class ColumnDefaults {
         return isPrimaryKey;
     }
 
-    public static final Boolean getDefaultPrimaryKey(String fieldName) {
-        return fieldName.equalsIgnoreCase("id");
-    }
+//    public static final Boolean getDefaultPrimaryKey(String fieldName) {
+//        return fieldName.equalsIgnoreCase("id");
+//    }
 
     public static final Integer getDefaultVarcharLength() {
         return 10000;

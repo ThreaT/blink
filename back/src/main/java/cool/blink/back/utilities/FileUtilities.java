@@ -1,29 +1,22 @@
 package cool.blink.back.utilities;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import org.apache.commons.io.FileUtils;
 
 public class FileUtilities {
 
     public static final synchronized String read(final File file) throws IOException {
-        String output = "";
-        String absoluteFilePath = file.getAbsolutePath();
-        BufferedReader br;
-        String sCurrentLine;
-        br = new BufferedReader(new FileReader(absoluteFilePath));
-        while ((sCurrentLine = br.readLine()) != null) {
-            output += sCurrentLine;
-        }
-        br.close();
-        return output;
+        return FileUtils.readFileToString(file);
     }
 
     public static final synchronized void write(final File file, final String content) throws IOException {
@@ -63,6 +56,39 @@ public class FileUtilities {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     *
+     * @param source source
+     * @param destination destination
+     * @throws IOException IOException
+     *
+     * Copy directory and all sub-directories and files to destination directory
+     */
+    @SuppressWarnings("ConvertToTryWithResources")
+    public static void copy(final File source, final File destination) throws IOException {
+        if (source.isDirectory()) {
+            if (!destination.exists()) {
+                destination.mkdirs();
+            }
+            String files[] = source.list();
+            for (String file : files) {
+                File sourceFile = new File(source, file);
+                File destinationFile = new File(destination, file);
+                copy(sourceFile, destinationFile);
+            }
+        } else {
+            InputStream inputStream = new FileInputStream(source);
+            OutputStream outputStream = new FileOutputStream(destination);
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = inputStream.read(buffer)) > 0) {
+                outputStream.write(buffer, 0, length);
+            }
+            inputStream.close();
+            outputStream.close();
         }
     }
 
@@ -114,6 +140,38 @@ public class FileUtilities {
             return false;
         }
         return file.createNewFile();
+    }
+
+    /**
+     *
+     * @param directory directory to scan
+     * @return all files found in the directory
+     */
+    public static final synchronized List<File> listFiles(final File directory) {
+        List<File> listOfFiles = new ArrayList<>();
+        listOfFiles.addAll(Arrays.asList(directory.listFiles()));
+        for (int i = 0; i < listOfFiles.size(); i++) {
+            if (listOfFiles.get(i).isFile()) {
+                listOfFiles.add(listOfFiles.get(i));
+            }
+        }
+        return listOfFiles;
+    }
+
+    /**
+     *
+     * @param directory directory to scan
+     * @return all folders found in the directory
+     */
+    public static final synchronized List<File> listFolders(final File directory) {
+        List<File> listOfFolders = new ArrayList<>();
+        listOfFolders.addAll(Arrays.asList(directory.listFiles()));
+        for (int i = 0; i < listOfFolders.size(); i++) {
+            if (listOfFolders.get(i).isDirectory()) {
+                listOfFolders.add(listOfFolders.get(i));
+            }
+        }
+        return listOfFolders;
     }
 
 }

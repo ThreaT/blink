@@ -67,11 +67,9 @@ public class ActionExecutor extends Thread {
      */
     public void execute(final Database database) {
         if (gapsExist(database)) {
-            System.out.println("gaps exist");
             rollback(database);
             install(database);
         } else {
-            System.out.println("no gaps exist");
             install(database);
         }
     }
@@ -83,12 +81,12 @@ public class ActionExecutor extends Thread {
      * If an action record with a blank timeOfExecution (timeOfExecution = 0) is
      * found between action records (action records with a creationTime both
      * before and after) that have a populated timeOfExecution (timeOfExecution
-     * > 0) then return true
+     * &gt; 0) then return true
      * </li>
      *
      * </ol>
      *
-     * @param database
+     * @param database database
      * @return true if gaps exist
      */
     public Boolean gapsExist(final Database database) {
@@ -120,7 +118,7 @@ public class ActionExecutor extends Thread {
      *
      * </ol>
      *
-     * @param database
+     * @param database database
      */
     public void rollback(final Database database) {
         try {
@@ -128,9 +126,7 @@ public class ActionExecutor extends Thread {
             Action oldestNonExecutedAction = Action.recordToAction((database.readRecordsForBlink(Action.class, new PreparedEntry("SELECT * FROM ACTION WHERE timeOfExecution = 0 ORDER BY creationTime ASC"), 1)).get(0));
             List<Action> actionsToRollback = Action.recordsToActions(database.readRecords(Action.class, new PreparedEntry("SELECT * FROM ACTION WHERE creationTime <= " + lastExecutedAction.getCreationTime() + " AND creationTime >= " + oldestNonExecutedAction.getCreationTime() + " ORDER BY creationTime DESC")));
             for (Action action : actionsToRollback) {
-                System.out.println("running rollback statement: " + action.getRollbackStatement());
                 database.unsafeExecuteForBlink(action.getRollbackStatement());
-                System.out.println("updating action timeofexecution after successful rollback statement");
                 database.unsafeExecuteForBlink("UPDATE ACTION SET timeOfExecution = 0 WHERE creationTime = " + action.getCreationTime() + " AND databaseId = " + "'" + action.getDatabaseId() + "'");
             }
         } catch (SQLException | ClassNotFoundException | InterruptedException ex) {
@@ -148,20 +144,15 @@ public class ActionExecutor extends Thread {
      *
      * </ol>
      *
-     * @param database
+     * @param database database
      */
     public void install(final Database database) {
         try {
             String executeQuery = "SELECT * FROM ACTION WHERE creationTime <= " + (System.currentTimeMillis() - this.executeInterval) + " AND timeOfExecution = 0 ORDER BY creationTime ASC, databaseId ASC";
             List<Record> recordsToExecute = database.readRecordsForBlink(Action.class, new PreparedEntry(executeQuery));
-            System.out.println("fetching records to execute: " + executeQuery);
-            System.out.println("records to execute: " + recordsToExecute.toString());
             List<Action> actionsToExecute = Action.recordsToActions(recordsToExecute);
-            System.out.println("actions to execute: " + actionsToExecute.toString());
             for (Action action : actionsToExecute) {
-                System.out.println("running forward statement: " + action.getForwardStatement());
                 database.unsafeExecuteForBlink(action.getForwardStatement());
-                System.out.println("updating action timeofexecution after successful forward statement");
                 database.unsafeExecuteForBlink("UPDATE ACTION SET timeOfExecution = " + System.currentTimeMillis() + " WHERE creationTime = " + action.getCreationTime() + " AND databaseId = " + "'" + action.getDatabaseId() + "'");
             }
         } catch (SQLException | ClassNotFoundException | InterruptedException ex) {

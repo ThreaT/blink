@@ -61,7 +61,7 @@ public class ValidFoo extends Scenario {
             Database database = Container.getDatabase(Helloworld1.helloworld1.getName(), "db1");
             Foo foo = new Foo(LongUtilities.generateUniqueTimeInMillis(), Foo.class.getSimpleName().toLowerCase());
             foo.setName(request.getParameters().get("name"));
-            database.createRecord(foo);
+            database.createClusteredRecord(foo);
             WebServer webServer = Container.getWebServer(Helloworld1.helloworld1.getName());
             webServer.respond(request, new ValidFooTemplate(foo).getResponse());
         } catch (SQLException | ClassNotFoundException | IllegalAccessException | IllegalArgumentException ex) {

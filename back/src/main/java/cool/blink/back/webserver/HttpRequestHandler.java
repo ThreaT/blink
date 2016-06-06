@@ -1,14 +1,10 @@
 package cool.blink.back.webserver;
 
 import cool.blink.back.core.Container;
-import cool.blink.back.utilities.HttpRequestUtilities;
-import cool.blink.back.utilities.HttpUtilities;
 import cool.blink.back.utilities.LogUtilities;
 import cool.blink.back.utilities.LogUtilities.Priority;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.logging.Logger;
 
 public class HttpRequestHandler extends Thread {
@@ -119,7 +115,7 @@ public class HttpRequestHandler extends Thread {
      * has intentions that match that of the request
      *
      * @param request request
-     * @param webServer
+     * @param webServer webServer
      * @return Scenario Scenario
      * @throws IllegalAccessException When there is a problem invoking Fit
      * @throws IllegalArgumentException When there is a problem creating a
@@ -168,7 +164,7 @@ public class HttpRequestHandler extends Thread {
      *
      * @param scenario Scenario
      * @param request request
-     * @param webServer
+     * @param webServer webServer
      * @throws IllegalAccessException When there is a problem invoking Test or
      * Main
      * @throws InstantiationException When there is a problem invoking Test or
@@ -191,34 +187,35 @@ public class HttpRequestHandler extends Thread {
         }
     }
 
+    //This method has been temporarily deactivated due to preference over physical load balancing as opposed to software-based load balancing
     /**
      * Use http client tools to forward the request somewhere else and then pass
      * on the reply to the request
      *
      * @param bestWebServerDetails best node to be used to handle the request
      * @param request request
+     * @param webServer webServer
      */
-    public final synchronized void sendProxyHttpRequest(final WebServerDetails bestWebServerDetails, final Request request, final WebServer webServer) {
-        String redirectUrl = "";
-        for (Url url : (List<Url>) bestWebServerDetails.getSupportedUrls()) {
-            if (url.getPath().equalsIgnoreCase(request.getUrl().getPath())) {
-                redirectUrl = url.getAbsoluteUrl();
-                break;
-            }
-        }
-        Response response;
-        try {
-            if (request.getMethod().equals(HttpUtilities.Method.POST)) {
-                response = HttpRequestUtilities.sendPost(redirectUrl, this.abandonServerTimeout);
-            } else {
-                response = HttpRequestUtilities.sendGet(redirectUrl, this.abandonServerTimeout);
-            }
-            webServer.respond(request, response);
-        } catch (IOException ex) {
-            response = new Response(Response.Status.$404, "404 Not Found");
-            webServer.respond(request, response);
-            Logger.getLogger(HttpRequestHandler.class.getName()).log(Priority.HIGHEST, null, ex);
-        }
-    }
-
+//    public final synchronized void sendProxyHttpRequest(final WebServerDetails bestWebServerDetails, final Request request, final WebServer webServer) {
+//        String redirectUrl = "";
+//        for (Url url : (List<Url>) bestWebServerDetails.getSupportedUrls()) {
+//            if (url.getPath().equalsIgnoreCase(request.getUrl().getPath())) {
+//                redirectUrl = url.getAbsoluteUrl();
+//                break;
+//            }
+//        }
+//        Response response;
+//        try {
+//            if (request.getMethod().equals(HttpUtilities.Method.POST)) {
+//                response = HttpRequestUtilities.sendPost(redirectUrl, this.abandonServerTimeout);
+//            } else {
+//                response = HttpRequestUtilities.sendGet(redirectUrl, this.abandonServerTimeout);
+//            }
+//            webServer.respond(request, response);
+//        } catch (IOException ex) {
+//            response = new Response(Response.Status.$404, "404 Not Found");
+//            webServer.respond(request, response);
+//            Logger.getLogger(HttpRequestHandler.class.getName()).log(Priority.HIGHEST, null, ex);
+//        }
+//    }
 }

@@ -40,14 +40,16 @@ public class ReflectionUtilities {
         return privateFields;
     }
 
-    public static final synchronized Object getVariableValue(final Class<?> clazz, final String fieldName) throws IllegalAccessException, IllegalArgumentException, NoSuchFieldException, SecurityException {
-        Object object;
+    public static final synchronized Object getVariableValue(final Class<?> clazz, final String fieldName) throws IllegalAccessException, IllegalArgumentException, NoSuchFieldException, SecurityException, InstantiationException {
+        Object object = clazz.newInstance();
         Field field = clazz.getDeclaredField(fieldName);
         field.setAccessible(true);
         if (field.isAccessible()) {
-            object = field.get(null);
-        } else {
-            return "";
+            try {
+                object = field.get(null);
+            } catch (NullPointerException ex) {
+                object = field.get(object);
+            }
         }
         return object;
     }

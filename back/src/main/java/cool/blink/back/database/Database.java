@@ -1,20 +1,38 @@
 package cool.blink.back.database;
 
-import cool.blink.back.core.Environment;
+import cool.blink.back.database.Column.BIGINT;
+import cool.blink.back.database.Column.BLOB;
+import cool.blink.back.database.Column.BOOLEAN;
+import cool.blink.back.database.Column.CHAR;
+import cool.blink.back.database.Column.CHAR_FOR_BIT_DATA;
+import cool.blink.back.database.Column.CLOB;
+import cool.blink.back.database.Column.ColumnGenerationType;
+import cool.blink.back.database.Column.DATE;
+import cool.blink.back.database.Column.DECIMAL;
+import cool.blink.back.database.Column.DOUBLE;
+import cool.blink.back.database.Column.DOUBLE_PRECISION;
+import cool.blink.back.database.Column.FLOAT;
+import cool.blink.back.database.Column.INTEGER;
+import cool.blink.back.database.Column.LONG_VARCHAR;
+import cool.blink.back.database.Column.LONG_VARCHAR_FOR_BIT_DATA;
+import cool.blink.back.database.Column.NUMERIC;
+import cool.blink.back.database.Column.REAL;
+import cool.blink.back.database.Column.SMALLINT;
+import cool.blink.back.database.Column.TIME;
+import cool.blink.back.database.Column.TIMESTAMP;
+import cool.blink.back.database.Column.VARCHAR;
+import cool.blink.back.database.Column.VARCHAR_FOR_BIT_DATA;
 import cool.blink.back.exception.InvalidActionParameterException;
 import cool.blink.back.utilities.DateUtilities;
 import cool.blink.back.utilities.LogUtilities;
 import cool.blink.back.utilities.LogUtilities.Priority;
 import cool.blink.back.utilities.ReflectionUtilities;
 import cool.blink.back.utilities.StringUtilities;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -32,12 +50,14 @@ import static java.util.Arrays.asList;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
+import net.sf.log4jdbc.PreparedStatementSpy;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.ibatis.jdbc.ScriptRunner;
 import org.joda.time.DateTime;
 
+//TODO refresh this list of methods
+//TODO Blink actions do not save byte objects across the cluster properly in action insert/rollback statements
 /**
  * API
  *
@@ -48,7 +68,7 @@ import org.joda.time.DateTime;
  * <li>public enum SqlDataType</li>
  * <li>public final SqlDataType sqlDataTypeMapper(final String type)</li>
  * <li>public final SqlDataType sqlDataMapper(final Class clazz)</li>
- * <li>public final Class javaDataMapper(final SqlDataType sqlDataType)</li>
+ * <li>public final Class javaDataMapper(final SqlDataType columnType)</li>
  * <li>public final void unsafeExecute(final String sql)</li>
  * <li>public final void execute(final String preparedSql, final Parameter...
  * parameters)</li>
@@ -63,7 +83,7 @@ import org.joda.time.DateTime;
  * <br>
  * <ul>
  * <li>public final void createCell - Will not be implemented</li>
- * <li>public final void createRecord(final Object object)</li>
+ * <li>public final void createClusteredRecord(final Object object)</li>
  * <li>public final void createColumn - Will not be implemented</li>
  * <li>public final void createTable(final Class clazz)</li>
  * <li>public final void createTable(final Column... columns)</li>
@@ -105,21 +125,23 @@ import org.joda.time.DateTime;
  */
 public final class Database {
 
-    private final DatabaseChain databaseChain;
     private final DatabaseDetails databaseDetails;
-    private final List<String> transactions;
+    private final DatabaseChain databaseChain;
+    private final DatabaseBackup databaseBackup;
     private final DatabaseSocketManager socketManager;
     private final DatabasePortScanner databasePortScanner;
     private final ActionSynchronizer actionSynchronizer;
     private final ActionExecutor actionExecutor;
-    private final List<Builder> builders;
+    private final Builder builder;
     private Connection connection;
     private Connection altConnection;
 
-    public Database(final DatabaseChain databaseChain, final DatabaseDetails databaseDetails, final DatabaseSocketManager socketManager, final DatabasePortScanner databasePortScanner, final ActionSynchronizer actionSynchronizer, final ActionExecutor actionExecutor, final Builder... builders) {
-        this.databaseChain = databaseChain;
+    public Database(final DatabaseDetails databaseDetails, final DatabaseChain databaseChain, final DatabaseBackup databaseBackup, final DatabaseSocketManager socketManager, final DatabasePortScanner databasePortScanner, final ActionSynchronizer actionSynchronizer, final ActionExecutor actionExecutor, final Builder builder) {
         this.databaseDetails = databaseDetails;
-        this.transactions = new ArrayList<>();
+        this.databaseChain = databaseChain;
+
+        this.databaseBackup = databaseBackup;
+        this.databaseBackup.setDatabaseChain(databaseChain);
 
         this.socketManager = socketManager;
         this.socketManager.setDatabaseChain(databaseChain);
@@ -133,24 +155,18 @@ public final class Database {
         this.actionExecutor = actionExecutor;
         this.actionExecutor.setDatabaseChain(databaseChain);
 
-        this.builders = asList(builders);
+        this.builder = builder;
     }
 
     public void begin() {
         try {
-            //Create database
-            createDatabase();
-
-            //Create action table
-            createTable(Action.class);
-
-            //Initialize datasets
-            for (Builder builder : this.builders) {
-                builder.execute();
-            }
-        } catch (ClassNotFoundException | SQLException | IllegalAccessException | IllegalArgumentException ex) {
+            //Initialize database
+            this.builder.execute();
+        } catch (IllegalArgumentException ex) {
             Logger.getLogger(Database.class.getName()).log(Priority.HIGHEST, null, ex);
         }
+        this.databaseBackup.start();
+        Logger.getLogger(Database.class.getName()).log(Priority.MEDIUM, "Backup Started.");
         this.socketManager.start();
         Logger.getLogger(Database.class.getName()).log(Priority.MEDIUM, "Socket Manager Started.");
         this.databasePortScanner.start();
@@ -169,8 +185,8 @@ public final class Database {
         return databaseChain;
     }
 
-    public List<String> getTransactions() {
-        return transactions;
+    public DatabaseBackup getDatabaseBackup() {
+        return databaseBackup;
     }
 
     public DatabaseSocketManager getSocketManager() {
@@ -189,8 +205,8 @@ public final class Database {
         return actionExecutor;
     }
 
-    public List<Builder> getBuilders() {
-        return builders;
+    public Builder getBuilder() {
+        return builder;
     }
 
     public Connection getConnection() {
@@ -226,8 +242,9 @@ public final class Database {
                 break;
             }
         }
-        Class.forName("org.apache.derby.jdbc.EmbeddedDriver");
-        this.connection = DriverManager.getConnection("jdbc:derby:" + new File(this.databaseChain.getDatabaseDestination() + this.databaseChain.getDatabaseName()).getAbsolutePath());
+        Class.forName("net.sf.log4jdbc.DriverSpy");
+        Connection temp = DriverManager.getConnection("jdbc:log4jdbc:derby:" + new File(this.databaseChain.getDatabaseDestination() + this.databaseChain.getDatabaseName()).getAbsolutePath());
+        this.connection = new net.sf.log4jdbc.ConnectionSpy(temp);
         this.connection.setAutoCommit(false);
     }
 
@@ -280,8 +297,9 @@ public final class Database {
                 break;
             }
         }
-        Class.forName("org.apache.derby.jdbc.EmbeddedDriver");
-        this.altConnection = DriverManager.getConnection("jdbc:derby:" + new File(this.databaseChain.getDatabaseDestination() + this.databaseChain.getDatabaseName()).getAbsolutePath());
+        Class.forName("net.sf.log4jdbc.DriverSpy");
+        Connection temp = DriverManager.getConnection("jdbc:log4jdbc:derby:" + new File(this.databaseChain.getDatabaseDestination() + this.databaseChain.getDatabaseName()).getAbsolutePath());
+        this.altConnection = new net.sf.log4jdbc.ConnectionSpy(temp);
         this.altConnection.setAutoCommit(false);
     }
 
@@ -317,131 +335,161 @@ public final class Database {
         }
     }
 
-    public enum SqlDataType {
-
-        BIGINT,
-        BLOB,
-        CHAR,
-        CLOB,
-        DATE,
-        DECIMAL,
-        DOUBLE,
-        FLOAT,
-        INTEGER,
-        NUMERIC,
-        REAL,
-        SMALLINT,
-        TIME,
-        TIMESTAMP,
-        VARCHAR
+    private String getTypeName(final Class derbyType) {
+        String typeName = null;
+        if (derbyType.equals(BIGINT.class)) {
+            typeName = BIGINT.class.getSimpleName();
+        } else if (derbyType.equals(BLOB.class)) {
+            typeName = BLOB.class.getSimpleName();
+        } else if (derbyType.equals(BOOLEAN.class)) {
+            typeName = BOOLEAN.class.getSimpleName();
+        } else if (derbyType.equals(CHAR.class)) {
+            typeName = CHAR.class.getSimpleName();
+        } else if (derbyType.equals(CHAR_FOR_BIT_DATA.class)) {
+            typeName = "CHAR FOR BIT DATA";
+        } else if (derbyType.equals(CLOB.class)) {
+            typeName = CLOB.class.getSimpleName();
+        } else if (derbyType.equals(DATE.class)) {
+            typeName = DATE.class.getSimpleName();
+        } else if (derbyType.equals(DECIMAL.class)) {
+            typeName = DECIMAL.class.getSimpleName();
+        } else if (derbyType.equals(DOUBLE.class)) {
+            typeName = DOUBLE.class.getSimpleName();
+        } else if (derbyType.equals(DOUBLE_PRECISION.class)) {
+            typeName = "DOUBLE PRECISION";
+        } else if (derbyType.equals(FLOAT.class)) {
+            typeName = FLOAT.class.getSimpleName();
+        } else if (derbyType.equals(INTEGER.class)) {
+            typeName = INTEGER.class.getSimpleName();
+        } else if (derbyType.equals(LONG_VARCHAR.class)) {
+            typeName = "LONG VARCHAR";
+        } else if (derbyType.equals(LONG_VARCHAR_FOR_BIT_DATA.class)) {
+            typeName = "LONG VARCHAR FOR BIT DATA";
+        } else if (derbyType.equals(NUMERIC.class)) {
+            typeName = NUMERIC.class.getSimpleName();
+        } else if (derbyType.equals(REAL.class)) {
+            typeName = REAL.class.getSimpleName();
+        } else if (derbyType.equals(SMALLINT.class)) {
+            typeName = SMALLINT.class.getSimpleName();
+        } else if (derbyType.equals(TIME.class)) {
+            typeName = TIME.class.getSimpleName();
+        } else if (derbyType.equals(TIMESTAMP.class)) {
+            typeName = TIMESTAMP.class.getSimpleName();
+        } else if (derbyType.equals(VARCHAR.class)) {
+            typeName = VARCHAR.class.getSimpleName();
+        } else if (derbyType.equals(VARCHAR_FOR_BIT_DATA.class)) {
+            typeName = "VARCHAR FOR BIT DATA";
+        }
+        return typeName;
     }
 
-    public static final SqlDataType sqlDataTypeMapper(final String type) {
-        SqlDataType sqlDataType = null;
-        switch (type.toUpperCase()) {
-            case "BIGINT":
-                sqlDataType = SqlDataType.BIGINT;
-                break;
-            case "BLOB":
-                sqlDataType = SqlDataType.BLOB;
-                break;
-            case "CHAR":
-                sqlDataType = SqlDataType.CHAR;
-                break;
-            case "CLOB":
-                sqlDataType = SqlDataType.CLOB;
-                break;
-            case "DATE":
-                sqlDataType = SqlDataType.DATE;
-                break;
-            case "DECIMAL":
-                sqlDataType = SqlDataType.DECIMAL;
-                break;
-            case "DOUBLE":
-                sqlDataType = SqlDataType.DOUBLE;
-                break;
-            case "FLOAT":
-                sqlDataType = SqlDataType.FLOAT;
-                break;
-            case "INTEGER":
-                sqlDataType = SqlDataType.INTEGER;
-                break;
-            case "NUMERIC":
-                sqlDataType = SqlDataType.NUMERIC;
-                break;
-            case "REAL":
-                sqlDataType = SqlDataType.REAL;
-                break;
-            case "SMALLINT":
-                sqlDataType = SqlDataType.SMALLINT;
-                break;
-            case "TIME":
-                sqlDataType = SqlDataType.TIME;
-                break;
-            case "TIMESTAMP":
-                sqlDataType = SqlDataType.TIMESTAMP;
-                break;
-            case "VARCHAR":
-                sqlDataType = SqlDataType.VARCHAR;
-                break;
+    private Class getDerbyType(final String typeName) {
+        Class derbyType = null;
+        if (typeName.equalsIgnoreCase("BIGINT")) {
+            derbyType = BIGINT.class;
+        } else if (typeName.equalsIgnoreCase("BLOB")) {
+            derbyType = BLOB.class;
+        } else if (typeName.equalsIgnoreCase("BOOLEAN")) {
+            derbyType = BOOLEAN.class;
+        } else if (typeName.equalsIgnoreCase("CHAR")) {
+            derbyType = CHAR.class;
+        } else if (typeName.equalsIgnoreCase("CHAR FOR BIT DATA")) {
+            derbyType = CHAR_FOR_BIT_DATA.class;
+        } else if (typeName.equalsIgnoreCase("CLOB")) {
+            derbyType = CLOB.class;
+        } else if (typeName.equalsIgnoreCase("DATE")) {
+            derbyType = DATE.class;
+        } else if (typeName.equalsIgnoreCase("DECIMAL")) {
+            derbyType = DECIMAL.class;
+        } else if (typeName.equalsIgnoreCase("DOUBLE")) {
+            derbyType = DOUBLE.class;
+        } else if (typeName.equalsIgnoreCase("DOUBLE PRECISION")) {
+            derbyType = DOUBLE_PRECISION.class;
+        } else if (typeName.equalsIgnoreCase("FLOAT")) {
+            derbyType = FLOAT.class;
+        } else if (typeName.equalsIgnoreCase("INTEGER")) {
+            derbyType = INTEGER.class;
+        } else if (typeName.equalsIgnoreCase("LONG VARCHAR")) {
+            derbyType = LONG_VARCHAR.class;
+        } else if (typeName.equalsIgnoreCase("LONG VARCHAR FOR BIT DATA")) {
+            derbyType = LONG_VARCHAR_FOR_BIT_DATA.class;
+        } else if (typeName.equalsIgnoreCase("NUMERIC")) {
+            derbyType = NUMERIC.class;
+        } else if (typeName.equalsIgnoreCase("REAL")) {
+            derbyType = REAL.class;
+        } else if (typeName.equalsIgnoreCase("SMALLINT")) {
+            derbyType = SMALLINT.class;
+        } else if (typeName.equalsIgnoreCase("TIME")) {
+            derbyType = TIME.class;
+        } else if (typeName.equalsIgnoreCase("TIMESTAMP")) {
+            derbyType = TIMESTAMP.class;
+        } else if (typeName.equalsIgnoreCase("VARCHAR")) {
+            derbyType = VARCHAR.class;
+        } else if (typeName.equalsIgnoreCase("VARCHAR FOR BIT DATA")) {
+            derbyType = VARCHAR_FOR_BIT_DATA.class;
         }
-        return sqlDataType;
+        return derbyType;
     }
 
-    public final SqlDataType sqlDataMapper(final Class clazz) {
-        SqlDataType sqlDataType;
-        switch (clazz.getSimpleName()) {
-            case "Boolean":
-                sqlDataType = SqlDataType.SMALLINT;
-                break;
-            case "String":
-                sqlDataType = SqlDataType.VARCHAR;
-                break;
-            case "Integer":
-                sqlDataType = SqlDataType.INTEGER;
-                break;
-            case "Long":
-                sqlDataType = SqlDataType.BIGINT;
-                break;
-            case "Object":
-                sqlDataType = SqlDataType.BLOB;
-                break;
-            case "Date":
-                sqlDataType = SqlDataType.DATE;
-                break;
-            case "DateTime":
-                sqlDataType = SqlDataType.TIMESTAMP;
-                break;
-            case "char":
-                sqlDataType = SqlDataType.CHAR;
-                break;
-            default:
-                sqlDataType = SqlDataType.BLOB;
-                break;
+    private List<Column> generateColumns(final ResultSet resultSet, final Table table) throws ClassNotFoundException, SQLException {
+        List<Column> columns = new ArrayList<>();
+        ResultSetMetaData columnMeta = resultSet.getMetaData();
+        Integer columnCount = columnMeta.getColumnCount();
+        for (int i = 0; i < columnCount; i++) {
+            String columnName = columnMeta.getColumnName(i + 1);
+            Class derbyType = getDerbyType(columnMeta.getColumnTypeName(i + 1).toUpperCase());
+            Integer columnLength = columnMeta.getPrecision(i + 1);
+            Boolean columnPrimaryKey = columnMeta.isAutoIncrement(i + 1);
+            Boolean columnNotNull = columnMeta.isNullable(i + 1) == 0;
+            Column column = generateColumn(columnName, derbyType, columnLength, columnPrimaryKey, columnNotNull, table);
+            columns.add(column);
+
         }
-        return sqlDataType;
+        return columns;
     }
 
-    public final Class javaDataMapper(final SqlDataType sqlDataType) {
-        Class clazz = null;
-        switch (sqlDataType) {
-            case VARCHAR:
-                clazz = String.class;
-                break;
-            case INTEGER:
-                clazz = Integer.class;
-                break;
-            case BLOB:
-                clazz = Object.class;
-                break;
-            case DATE:
-                clazz = java.sql.Date.class;
-                break;
-            case CHAR:
-                clazz = char.class;
-                break;
+    private Column generateColumn(final String columnName, final Class derbyType, final Integer columnLength, final Boolean columnPrimaryKey, final Boolean columnNotNull, final Table table) {
+        Column column = null;
+        if (derbyType.equals(BIGINT.class)) {
+            column = new BIGINT(columnName, columnPrimaryKey, columnNotNull, table);
+        } else if (derbyType.equals(BLOB.class)) {
+            column = new BLOB(columnName, columnLength, columnPrimaryKey, columnNotNull, table);
+        } else if (derbyType.equals(BOOLEAN.class)) {
+            column = new BOOLEAN(columnName, columnNotNull, table);
+        } else if (derbyType.equals(CHAR.class)) {
+            column = new CHAR(columnName, null, columnLength, null, columnPrimaryKey, columnNotNull, table);
+        } else if (derbyType.equals(CLOB.class)) {
+            column = new CLOB(columnName, columnLength, columnPrimaryKey, columnNotNull, table);
+        } else if (derbyType.equals(DATE.class)) {
+            column = new DATE(columnName, null, columnLength, null, columnPrimaryKey, columnNotNull, table);
+        } else if (derbyType.equals(BIGINT.class)) {
+            column = new BIGINT(columnName, columnPrimaryKey, columnNotNull, table);
+        } else if (derbyType.equals(DECIMAL.class)) {
+            column = new DECIMAL(columnName, null, columnLength, null, columnPrimaryKey, columnNotNull, table);
+        } else if (derbyType.equals(DOUBLE.class)) {
+            column = new DOUBLE(columnName, columnNotNull, table);
+        } else if (derbyType.equals(FLOAT.class)) {
+            column = new FLOAT(columnName, null, columnLength, null, columnPrimaryKey, columnNotNull, table);
+        } else if (derbyType.equals(INTEGER.class)) {
+            if (columnPrimaryKey) {
+                column = new INTEGER(columnName, ColumnGenerationType.BY_DEFAULT, columnPrimaryKey, columnNotNull, table);
+            } else {
+                column = new INTEGER(columnName, columnNotNull, table);
+            }
+        } else if (derbyType.equals(NUMERIC.class)) {
+            column = new NUMERIC(columnName, null, columnLength, null, columnPrimaryKey, columnNotNull, table);
+        } else if (derbyType.equals(REAL.class)) {
+            column = new REAL(columnName, null, columnLength, null, columnPrimaryKey, columnNotNull, table);
+        } else if (derbyType.equals(SMALLINT.class)) {
+            column = new SMALLINT(columnName, null, columnLength, null, columnPrimaryKey, columnNotNull, table);
+        } else if (derbyType.equals(TIME.class)) {
+            column = new TIME(columnName, null, columnLength, null, columnPrimaryKey, columnNotNull, table);
+        } else if (derbyType.equals(TIMESTAMP.class)) {
+            column = new TIMESTAMP(columnName, columnNotNull, table);
+        } else if (derbyType.equals(VARCHAR.class)) {
+            column = new VARCHAR(columnName, columnLength, columnPrimaryKey, columnNotNull, table);
         }
-        return clazz;
+        return column;
     }
 
     public final void unsafeExecute(final String sql) throws ClassNotFoundException, SQLException {
@@ -460,6 +508,7 @@ public final class Database {
         disconnectForBlink();
     }
 
+    @SuppressWarnings("ConvertToTryWithResources")
     public final void execute(final PreparedEntry preparedEntry) throws ClassNotFoundException, SQLException {
         Integer totalPlaceholders = StringUtils.countMatches(preparedEntry.getSql(), "?");
         if (totalPlaceholders != preparedEntry.getParameters().size()) {
@@ -487,10 +536,11 @@ public final class Database {
             }
         }
         preparedStatement.executeUpdate();
-        preparedStatement.closeOnCompletion();
+        preparedStatement.close();
         disconnect();
     }
 
+    @SuppressWarnings("ConvertToTryWithResources")
     public final synchronized void executeForBlink(final PreparedEntry preparedEntry) throws ClassNotFoundException, SQLException {
         Integer totalPlaceholders = StringUtils.countMatches(preparedEntry.getSql(), "?");
         if (totalPlaceholders != preparedEntry.getParameters().size()) {
@@ -518,64 +568,147 @@ public final class Database {
             }
         }
         preparedStatement.executeUpdate();
-        preparedStatement.closeOnCompletion();
+        preparedStatement.close();
         disconnectForBlink();
     }
 
-    public final synchronized void addUnsafeTransaction(final String query) {
-        this.transactions.add(query);
-    }
-
-    public final synchronized void executeUnsafeBatch() throws ClassNotFoundException, SQLException {
-        try (Connection tempConnection = DriverManager.getConnection("jdbc:derby:" + new File(this.databaseChain.getDatabaseDestination() + this.databaseChain.getDatabaseName()).getAbsolutePath())) {
-            Statement statement = tempConnection.createStatement();
-            tempConnection.setAutoCommit(false);
-            for (String transaction : this.transactions) {
-                statement.addBatch(transaction);
-            }
-            statement.executeBatch();
-            tempConnection.commit();
+    public final void createRecord(final Object object) throws ClassNotFoundException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SQLException {
+        //Generate reflection data from object
+        List<Field> fields = ReflectionUtilities.classToFieldsList(object.getClass());
+        List<Parameter> parameters = new ArrayList<>();
+        for (int i = 1; i < fields.size() + 1; i++) {
+            Integer placeholderIndex = parameters.size() + 1;
+            Object value = PropertyUtils.getProperty(object, fields.get(i - 1).getName());
+            Class type = fields.get(i - 1).getType();
+            Parameter parameter = new Parameter(placeholderIndex, value, type);
+            parameters.add(parameter);
         }
-    }
 
-    public final synchronized void execute(final Environment environment, final String driverName, final String dump) throws ClassNotFoundException, FileNotFoundException, SQLException {
-        Class.forName(driverName);
-        Connection connection1 = DriverManager.getConnection(environment.getUrl(), environment.getUsername(), environment.getPassword());
-        ScriptRunner scriptRunner = new ScriptRunner(connection1);
-        scriptRunner.setLogWriter(null);
-        StringReader stringReader = new StringReader(dump);
-        Reader reader = new BufferedReader(stringReader);
-        scriptRunner.runScript(reader);
+        //Create forward statement
+        String forward = "INSERT INTO " + object.getClass().getSimpleName().toUpperCase() + "(";
+        for (int i = 1; i < fields.size() + 1; i++) {
+            fields.get(i - 1).setAccessible(true);
+            forward += fields.get(i - 1).getName();
+            if (fields.size() > i) {
+                forward += ",";
+            }
+        }
+        forward += ") VALUES(";
+        for (int i = 0; i < fields.size(); i++) {
+            fields.get(i).setAccessible(true);
+            Parameter parameter = parameters.get(i);
+            switch (parameter.getType().getSimpleName().toLowerCase()) {
+                case "string":
+                    forward += "'" + StringUtilities.escapeDerby(fields.get(i).get(object).toString()) + "'";
+                    break;
+                case "integer":
+                    forward += StringUtilities.escapeDerby(fields.get(i).get(object).toString());
+                    break;
+                case "date":
+                    forward += "'" + StringUtilities.escapeDerby(fields.get(i).get(object).toString()) + "'";
+                    break;
+                case "long":
+                    forward += StringUtilities.escapeDerby(fields.get(i).get(object).toString());
+                    break;
+                default:
+                    forward += "'" + StringUtilities.escapeDerby(fields.get(i).get(object).toString()) + "'";
+                    break;
+            }
+            if (fields.size() > i + 1) {
+                forward += ",";
+            } else {
+                forward += ")";
+            }
+        }
+
+        unsafeExecute(forward);
     }
 
     /**
-     * This method must be invoked after every database write event in order to
-     * sync this event across all other databases in the cluster
+     * This method must be executed after a successful database write event in
+     * order to sync the data across all other databases in the cluster
      *
-     * @param action action
-     * @throws ClassNotFoundException ClassNotFoundException
-     * @throws SQLException SQLException
+     * @param databaseId databaseId
+     * @param forwardStatement forwardStatement
+     * @param rollbackStatement rollbackStatement
+     * @param generateKeys ResultSet is returned with ID of newly inserted
+     * record and is obtainable using resultSet.getInt(1)
+     * @return PreparedStatement forwardStatement after execution is complete
+     * @throws java.lang.NoSuchMethodException NoSuchMethodException
+     * @throws java.sql.SQLException SQLException
+     * @throws java.lang.ClassNotFoundException ClassNotFoundException
+     * @throws java.lang.IllegalAccessException IllegalAccessException
+     * @throws java.lang.reflect.InvocationTargetException
+     * InvocationTargetException
      */
-    public final void persistAction(final Action action) throws ClassNotFoundException, SQLException {
-        connect();
+    public final Clusterable addToCluster(final String databaseId, final PreparedStatement forwardStatement, final PreparedStatement rollbackStatement, final Boolean generateKeys) throws NoSuchMethodException, SQLException, ClassNotFoundException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+        //Run once to ensure that forwardStatement works as expected
+        String forwardQuery = "";
+        if (forwardStatement instanceof PreparedStatementSpy) {
+            Method m = PreparedStatementSpy.class.getDeclaredMethod("dumpedSql");
+            m.setAccessible(true);
+            forwardQuery = (String) m.invoke(forwardStatement);
+        }
+
+        //Run once to ensure that rollbackStatement works as expected
+        String rollBackQuery = "";
+        if (rollbackStatement instanceof PreparedStatementSpy) {
+            Method m = PreparedStatementSpy.class.getDeclaredMethod("dumpedSql");
+            m.setAccessible(true);
+            rollBackQuery = (String) m.invoke(forwardStatement);
+        }
+
+        //Run second time to perform the database action for real
+        forwardStatement.executeUpdate();
+
+        //Get ID of newly inserted record
+        ResultSet generatedKeys = null;
+        if (generateKeys) {
+            generatedKeys = forwardStatement.getGeneratedKeys();
+            generatedKeys.next();
+        }
+
+        //Insert action so that other databases can replicate the insert
+        Long currentTime = System.currentTimeMillis();
+        Action action = new Action(currentTime, databaseId, forwardQuery, rollBackQuery, currentTime);
+        connectForBlink();
         PreparedStatement preparedStatement;
         preparedStatement = this.connection.prepareStatement("INSERT INTO ACTION (CREATIONTIME,DATABASEID,FORWARDSTATEMENT,ROLLBACKSTATEMENT,TIMEOFEXECUTION) VALUES(?,?,?,?,?)");
         preparedStatement.setLong(1, action.getCreationTime());
         preparedStatement.setString(2, action.getDatabaseId());
         preparedStatement.setString(3, action.getForwardStatement());
         preparedStatement.setString(4, action.getRollbackStatement());
-        Long timeOfExecution;
-        if (action.getTimeOfExecution() == null) {
-            timeOfExecution = System.currentTimeMillis();
-        } else {
-            timeOfExecution = action.getTimeOfExecution();
-        }
-        preparedStatement.setLong(5, timeOfExecution);
+        preparedStatement.setLong(5, action.getTimeOfExecution());
         preparedStatement.executeUpdate();
-        disconnect();
+        disconnectForBlink();
+
+        return new Clusterable(forwardStatement, rollbackStatement, generatedKeys);
     }
 
-    public final void createRecord(final Object object) throws ClassNotFoundException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SQLException {
+    private void addToClusterForBlink(final Action action) {
+        try {
+            connect();
+            PreparedStatement preparedStatement;
+            preparedStatement = this.connection.prepareStatement("INSERT INTO ACTION (CREATIONTIME,DATABASEID,FORWARDSTATEMENT,ROLLBACKSTATEMENT,TIMEOFEXECUTION) VALUES(?,?,?,?,?)");
+            preparedStatement.setLong(1, action.getCreationTime());
+            preparedStatement.setString(2, action.getDatabaseId());
+            preparedStatement.setString(3, action.getForwardStatement());
+            preparedStatement.setString(4, action.getRollbackStatement());
+            Long timeOfExecution;
+            if (action.getTimeOfExecution() == null) {
+                timeOfExecution = System.currentTimeMillis();
+            } else {
+                timeOfExecution = action.getTimeOfExecution();
+            }
+            preparedStatement.setLong(5, timeOfExecution);
+            preparedStatement.executeUpdate();
+            disconnect();
+        } catch (ClassNotFoundException | SQLException ex) {
+            Logger.getLogger(Database.class.getName()).log(Priority.HIGHEST, null, ex);
+        }
+    }
+
+    public final void createClusteredRecord(final Object object) throws ClassNotFoundException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SQLException {
         //Generate reflection data from object
         List<Field> fields = ReflectionUtilities.classToFieldsList(object.getClass());
         List<Parameter> parameters = new ArrayList<>();
@@ -654,71 +787,11 @@ public final class Database {
         unsafeExecute(forward);
 
         try {
-            persistAction(new Action(System.currentTimeMillis(), this.getDatabaseDetails().getId(), forward, rollback));
+            addToClusterForBlink(new Action(System.currentTimeMillis(), this.getDatabaseDetails().getId(), forward, rollback));
         } catch (InvalidActionParameterException ex) {
             Logger.getLogger(Database.class.getName()).log(Priority.HIGHEST, null, ex);
         }
-    }
 
-    public final void createTable(final Class clazz) throws ClassNotFoundException, SQLException, IllegalAccessException, IllegalArgumentException {
-        Table table = new Table(clazz.getSimpleName());
-
-        //Generate the column classes for clazz
-        List<Field> classFields = ReflectionUtilities.classToFieldsList(clazz);
-        Column column;
-        List<Column> columns = new ArrayList<>();
-        for (Field field : classFields) {
-            String columnName = field.getName();
-            SqlDataType sqlDataType = sqlDataMapper(field.getType());
-            Integer length = null;
-            if (sqlDataType.equals(SqlDataType.VARCHAR)) {
-                length = ColumnDefaults.getDefaultVarcharLength();
-            }
-            //Primary Key by default if the field name is "id"
-            Boolean primaryKey = ColumnDefaults.getDefaultPrimaryKey(field.getName());
-            //Nullable by default when not a primary key
-            Boolean notNull = ColumnDefaults.getDefaultNotNull(primaryKey);
-            column = new Column(columnName, sqlDataType, length, primaryKey, notNull, table);
-            columns.add(column);
-        }
-
-        table.getColumns().addAll(columns);
-        if (tableExists(table)) {
-            Logger.getLogger(Database.class.getName()).log(Priority.HIGH, "{0} table already exists.", clazz.getSimpleName());
-        } else {
-            //Create the table in the physical database
-            String createStatement = "CREATE TABLE ";
-            Column primaryKey = null;
-            SqlDataType sqlDataType;
-            createStatement += table.getName() + "(";
-            for (int i = 0; i < table.getColumns().size(); i++) {
-                createStatement += table.getColumns().get(i).getName();
-                sqlDataType = table.getColumns().get(i).getSqlDataType();
-                createStatement += " " + sqlDataType;
-                if ((table.getColumns().get(i).getLength() != null) && (sqlDataType != SqlDataType.BIGINT)) {
-                    createStatement += (table.getColumns().get(i).getLength() == null ? "" : " " + "(" + table.getColumns().get(i).getLength() + ")");
-                }
-                createStatement += (table.getColumns().get(i).getNotNull() == true ? " " + "NOT NULL" : "");
-                if (table.getColumns().get(i).getPrimaryKey() == true) {
-                    primaryKey = table.getColumns().get(i);
-                    createStatement += " " + "GENERATED BY DEFAULT AS IDENTITY (START WITH 1, INCREMENT BY 1)";
-                }
-                if (i == table.getColumns().size() - 1) {
-                    if (primaryKey != null) {
-                        createStatement += ", PRIMARY KEY (" + primaryKey.getName() + ")";
-                    }
-                } else {
-                    createStatement += ", ";
-                }
-            }
-            createStatement += ")";
-            execute(new PreparedEntry(createStatement));
-            if (tableExists(table)) {
-                Logger.getLogger(Database.class.getName()).log(Priority.MEDIUM, "{0} table has been created.", clazz.getSimpleName());
-            } else {
-                Logger.getLogger(Database.class.getName()).log(Priority.HIGH, "There was a problem while attempting to create a physical table titled {0}.", clazz.getSimpleName());
-            }
-        }
     }
 
     public final void createTable(final Class clazz, final Column... columns) throws ClassNotFoundException, SQLException {
@@ -730,19 +803,28 @@ public final class Database {
             //Create the table in the physical database
             String createStatement = "CREATE TABLE ";
             Column primaryKey = null;
-            SqlDataType sqlDataType;
-            createStatement += table.getName() + "(";
+            Class derbyType;
+            String databaseName = "\"" + "APP" + "\"";
+            String tableName = "\"" + table.getName() + "\"";
+            createStatement += databaseName + "." + tableName;
+            if (!table.getColumns().isEmpty()) {
+                createStatement += " (";
+            }
             for (int i = 0; i < table.getColumns().size(); i++) {
                 createStatement += table.getColumns().get(i).getName();
-                sqlDataType = table.getColumns().get(i).getSqlDataType();
-                createStatement += " " + sqlDataType;
-                if ((table.getColumns().get(i).getLength() != null) && (sqlDataType != SqlDataType.BIGINT)) {
-                    createStatement += (table.getColumns().get(i).getLength() == null ? "" : " " + "(" + table.getColumns().get(i).getLength() + ")");
+                derbyType = table.getColumns().get(i).getClass();
+                createStatement += " " + getTypeName(derbyType);
+                if ((table.getColumns().get(i).getLength() != null) && (derbyType != BIGINT.class)) {
+                    createStatement += " " + "(" + table.getColumns().get(i).getLength();
+                    if (table.getColumns().get(i).getLengthSuffix() != null) {
+                        createStatement += table.getColumns().get(i).getLengthSuffix();
+                    }
+                    createStatement += ")";
                 }
                 createStatement += (table.getColumns().get(i).getNotNull() == true ? " " + "NOT NULL" : "");
                 if (table.getColumns().get(i).getPrimaryKey() == true) {
                     primaryKey = table.getColumns().get(i);
-                    createStatement += " " + "GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1)";
+                    createStatement += " " + table.getColumns().get(i).getColumnGenerationType().toString();
                 }
                 if (i == table.getColumns().size() - 1) {
                     if (primaryKey != null) {
@@ -752,7 +834,9 @@ public final class Database {
                     createStatement += ", ";
                 }
             }
-            createStatement += ")";
+            if (!table.getColumns().isEmpty()) {
+                createStatement += ")";
+            }
             execute(new PreparedEntry(createStatement));
             if (tableExists(table)) {
                 Logger.getLogger(Database.class.getName()).log(Priority.MEDIUM, "{0} table has been created.", clazz.getSimpleName());
@@ -762,7 +846,7 @@ public final class Database {
         }
     }
 
-    public final void createDatabase() throws SQLException {
+    public final void createDatabase() throws SQLException, IOException, ClassNotFoundException {
         if (databaseExists()) {
             Logger.getLogger(Database.class.getName()).log(LogUtilities.Priority.HIGH, "Database already exists in {0}/{1}, this database will be used.", new Object[]{new File(this.databaseChain.getDatabaseDestination()).getAbsolutePath(), this.databaseChain.getDatabaseName()});
         } else {
@@ -773,9 +857,18 @@ public final class Database {
             } else {
                 Logger.getLogger(Database.class.getName()).log(LogUtilities.Priority.HIGH, "There was a problem while attempting to create the physical database.");
             }
+            createTable(
+                    Action.class,
+                    new BIGINT("creationTime", ColumnGenerationType.BY_DEFAULT, true, true, new Table(Action.class.getSimpleName())),
+                    new VARCHAR("databaseId", 100, true, new Table(Action.class.getSimpleName())),
+                    new LONG_VARCHAR("forwardStatement", true, new Table(Action.class.getSimpleName())),
+                    new LONG_VARCHAR("rollbackStatement", true, new Table(Action.class.getSimpleName())),
+                    new BIGINT("timeOfExecution", true, new Table(Action.class.getSimpleName()))
+            );
         }
     }
 
+    @SuppressWarnings("ConvertToTryWithResources")
     public final List<Record> readRecords(final PreparedEntry preparedEntry) throws ClassNotFoundException, SQLException, InterruptedException {
         Integer totalPlaceholders = StringUtils.countMatches(preparedEntry.getSql(), "?");
         if (totalPlaceholders != preparedEntry.getParameters().size()) {
@@ -805,17 +898,7 @@ public final class Database {
         ResultSet resultSet = preparedStatement.executeQuery();
 
         //Get column data
-        List<Column> columns = new ArrayList<>();
-        ResultSetMetaData columnMeta = resultSet.getMetaData();
-        Integer columnCount = columnMeta.getColumnCount();
-        for (int i = 0; i < columnCount; i++) {
-            String columnName = columnMeta.getColumnName(i + 1);
-            SqlDataType sqlDataType = sqlDataTypeMapper((columnMeta.getColumnTypeName(i + 1)));
-            Integer columnLength = columnMeta.getPrecision(i + 1);
-            Boolean columnPrimaryKey = columnMeta.isAutoIncrement(i + 1);
-            Boolean columnNotNull = columnMeta.isNullable(i + 1) == 0;
-            columns.add(new Column(columnName, sqlDataType, columnLength, columnPrimaryKey, columnNotNull));
-        }
+        List<Column> columns = generateColumns(resultSet, null);
 
         //Get records data from resultSet
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
@@ -853,11 +936,12 @@ public final class Database {
             }
         }
 
-        preparedStatement.closeOnCompletion();
+        preparedStatement.close();
         disconnect();
         return records;
     }
 
+    @SuppressWarnings("ConvertToTryWithResources")
     public final synchronized List<Record> readRecordsForBlink(final Class clazz, final PreparedEntry preparedEntry) throws ClassNotFoundException, SQLException, InterruptedException {
         Table table = new Table(clazz.getSimpleName());
         Integer totalPlaceholders = StringUtils.countMatches(preparedEntry.getSql(), "?");
@@ -894,17 +978,7 @@ public final class Database {
         ResultSet resultSet = preparedStatement.executeQuery();
 
         //Get column data
-        List<Column> columns = new ArrayList<>();
-        ResultSetMetaData columnMeta = resultSet.getMetaData();
-        Integer columnCount = columnMeta.getColumnCount();
-        for (int i = 0; i < columnCount; i++) {
-            String columnName = columnMeta.getColumnName(i + 1);
-            SqlDataType sqlDataType = sqlDataTypeMapper((columnMeta.getColumnTypeName(i + 1)));
-            Integer columnLength = columnMeta.getPrecision(i + 1);
-            Boolean columnPrimaryKey = columnMeta.isAutoIncrement(i + 1);
-            Boolean columnNotNull = columnMeta.isNullable(i + 1) == 0;
-            columns.add(new Column(columnName, sqlDataType, columnLength, columnPrimaryKey, columnNotNull, table));
-        }
+        List<Column> columns = generateColumns(resultSet, table);
 
         //Get record data from resultSet
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
@@ -944,12 +1018,12 @@ public final class Database {
             records.remove(record);
             records.add(record);
         }
-
-        preparedStatement.closeOnCompletion();
+        preparedStatement.close();
         disconnectForBlink();
         return records;
     }
 
+    @SuppressWarnings("ConvertToTryWithResources")
     public final List<Record> readRecords(final Class clazz, final PreparedEntry preparedEntry) throws ClassNotFoundException, SQLException, InterruptedException {
         Table table = new Table(clazz.getSimpleName());
         Integer totalPlaceholders = StringUtils.countMatches(preparedEntry.getSql(), "?");
@@ -986,17 +1060,7 @@ public final class Database {
         ResultSet resultSet = preparedStatement.executeQuery();
 
         //Get column data
-        List<Column> columns = new ArrayList<>();
-        ResultSetMetaData columnMeta = resultSet.getMetaData();
-        Integer columnCount = columnMeta.getColumnCount();
-        for (int i = 0; i < columnCount; i++) {
-            String columnName = columnMeta.getColumnName(i + 1);
-            SqlDataType sqlDataType = sqlDataTypeMapper((columnMeta.getColumnTypeName(i + 1)));
-            Integer columnLength = columnMeta.getPrecision(i + 1);
-            Boolean columnPrimaryKey = columnMeta.isAutoIncrement(i + 1);
-            Boolean columnNotNull = columnMeta.isNullable(i + 1) == 0;
-            columns.add(new Column(columnName, sqlDataType, columnLength, columnPrimaryKey, columnNotNull, table));
-        }
+        List<Column> columns = generateColumns(resultSet, table);
 
         //Get record data from resultSet
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
@@ -1036,11 +1100,12 @@ public final class Database {
             records.add(record);
         }
 
-        preparedStatement.closeOnCompletion();
+        preparedStatement.close();
         disconnect();
         return records;
     }
 
+    @SuppressWarnings("ConvertToTryWithResources")
     public final List<Record> readRecordsForBlink(final Class clazz, final PreparedEntry preparedEntry, final Integer limit) throws ClassNotFoundException, SQLException, InterruptedException {
         Table table = new Table(clazz.getSimpleName());
         Integer totalPlaceholders = StringUtils.countMatches(preparedEntry.getSql(), "?");
@@ -1078,17 +1143,7 @@ public final class Database {
         ResultSet resultSet = preparedStatement.executeQuery();
 
         //Get column data
-        List<Column> columns = new ArrayList<>();
-        ResultSetMetaData columnMeta = resultSet.getMetaData();
-        Integer columnCount = columnMeta.getColumnCount();
-        for (int i = 0; i < columnCount; i++) {
-            String columnName = columnMeta.getColumnName(i + 1);
-            SqlDataType sqlDataType = sqlDataTypeMapper((columnMeta.getColumnTypeName(i + 1)));
-            Integer columnLength = columnMeta.getPrecision(i + 1);
-            Boolean columnPrimaryKey = columnMeta.isAutoIncrement(i + 1);
-            Boolean columnNotNull = columnMeta.isNullable(i + 1) == 0;
-            columns.add(new Column(columnName, sqlDataType, columnLength, columnPrimaryKey, columnNotNull, table));
-        }
+        List<Column> columns = generateColumns(resultSet, table);
 
         //Get record data from resultSet
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
@@ -1128,7 +1183,7 @@ public final class Database {
             records.add(record);
         }
 
-        preparedStatement.closeOnCompletion();
+        preparedStatement.close();
         disconnectForBlink();
         return records;
     }
@@ -1149,7 +1204,7 @@ public final class Database {
                         try (ResultSet columnResultSet = columnMeta.getColumns(null, null, table.getName(), null)) {
                             while (columnResultSet.next()) {
                                 String columnName = columnResultSet.getString("COLUMN_NAME");
-                                SqlDataType sqlDataType = sqlDataTypeMapper((columnResultSet.getString("TYPE_NAME")));
+                                Class derbyType = Class.forName(columnResultSet.getString("TYPE_NAME").toUpperCase());
                                 Integer columnLength = columnResultSet.getInt("COLUMN_SIZE");
                                 Boolean columnPrimaryKey = false;
                                 columnPrimaryKeysSet = columnMeta.getPrimaryKeys(null, null, table.getName());
@@ -1159,7 +1214,7 @@ public final class Database {
                                     }
                                 }
                                 Boolean columnNotNull = columnResultSet.getString("NULLABLE").equals("0");
-                                Column column = new Column(columnName, sqlDataType, columnLength, columnPrimaryKey, columnNotNull, table);
+                                Column column = generateColumn(columnName, derbyType, columnLength, columnPrimaryKey, columnNotNull, table);
                                 tableColumns.add(column);
                             }
                         }

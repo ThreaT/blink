@@ -67,7 +67,7 @@ public class Site {
                     new cool.blink.site.scenariocreator.read.ScenarioCreator(new Url("http://127.0.0.1:80/scenariocreator", true), new Url("http://blink.cool:80/scenariocreator", true), new Url("http://www.blink.cool:80/scenariocreator", true))
             );
             Site.site = new Blink(name, cloud, databases, webServer);
-            site.start();
+            site.start(Boolean.TRUE);
         } catch (IOException | InvalidPortsException | DuplicateApplicationException | DuplicateDatabaseException ex) {
             Logger.getLogger(Site.class.getName()).log(LogUtilities.Priority.HIGHEST, null, ex);
         }

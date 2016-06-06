@@ -8,33 +8,29 @@ public final class DatabaseDetails implements Serializable {
     private final String id;
     private final String ip;
     private final Integer port;
-    private Object additionalComponent;
+    private final Long startupTime;
 
-    public DatabaseDetails(final String id, final String ip, final Integer port) {
+    public DatabaseDetails(final String id, final String ip, final Integer port, final Long startupTime) {
         this.id = id;
         this.ip = ip;
         this.port = port;
-        this.additionalComponent = null;
+        this.startupTime = startupTime;
     }
 
-    public String getId() {
+    public final String getId() {
         return id;
     }
 
-    public String getIp() {
+    public final String getIp() {
         return ip;
     }
 
-    public Integer getPort() {
+    public final Integer getPort() {
         return port;
     }
 
-    public Object getAdditionalComponent() {
-        return additionalComponent;
-    }
-
-    public void setAdditionalComponent(Object additionalComponent) {
-        this.additionalComponent = additionalComponent;
+    public final Long getStartupTime() {
+        return startupTime;
     }
 
     @Override
@@ -66,7 +62,7 @@ public final class DatabaseDetails implements Serializable {
 
     @Override
     public String toString() {
-        return "DatabaseDetails{" + "id=" + id + ", ip=" + ip + ", port=" + port + ", additionalComponent=" + additionalComponent + '}';
+        return "DatabaseDetails{" + "id=" + id + ", ip=" + ip + ", port=" + port + '}';
     }
 
 }

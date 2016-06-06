@@ -56,7 +56,7 @@ public class Sessions {
                     new Logout(new Url("http://localhost:80/examples/sessions/logout"))
             );
             Sessions.sessions = new Blink(name, cloud, databases, webServer);
-            sessions.start();
+            sessions.start(Boolean.TRUE);
         } catch (IOException | InvalidPortsException | DuplicateApplicationException | DuplicateDatabaseException ex) {
             Logger.getLogger(Echo.class.getName()).log(LogUtilities.Priority.HIGHEST, null, ex);
         }

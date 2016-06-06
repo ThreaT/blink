@@ -187,7 +187,7 @@ public final class Request {
     public final HttpUtilities.Method getMethodFromRequestData() throws CorruptMethodException {
         List<HttpUtilities.Method> httpMethods = new ArrayList<>(Arrays.asList(HttpUtilities.Method.values()));
         for (HttpUtilities.Method httpMethod : httpMethods) {
-            if (httpMethod.toString().equalsIgnoreCase(this.data.substring(0, httpMethod.toString().length()))) {
+            if ((this.data.length() >= httpMethod.toString().length()) && httpMethod.toString().equalsIgnoreCase(this.data.substring(0, httpMethod.toString().length()))) {
                 return httpMethod;
             }
         }
@@ -302,7 +302,7 @@ public final class Request {
 
     @Override
     public String toString() {
-        return "Request{" + "asynchronousSocketChannel=" + asynchronousSocketChannel + ", byteBuffer=" + byteBuffer + ", rawData=" + rawData + ", data=" + data + ", method=" + method + ", headers=" + headers + ", port=" + port + ", parameters=" + parameters + ", url=" + url + ", body=" + body + '}';
+        return "Request{" + "asynchronousSocketChannel=" + asynchronousSocketChannel + ", byteBuffer=" + byteBuffer + ", rawData=" + rawData + ", data=" + data + ", method=" + method + ", headers=" + headers + ", port=" + port + ", parameters=" + parameters + ", url=" + url + ", body=" + body + ", webServer=" + webServer + '}';
     }
 
 }

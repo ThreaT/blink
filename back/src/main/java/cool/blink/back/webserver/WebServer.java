@@ -138,6 +138,15 @@ public class WebServer extends Thread {
         return tempSupportedUrls;
     }
 
+    public final String getRelativePathOfScenarioFirstUrl(final Class clazz) {
+        for (Scenario scenario : scenarios) {
+            if (scenario.getClazz().equals(clazz)) {
+                return scenario.getUrls().get(0).getPath();
+            }
+        }
+        return null;
+    }
+
     @Override
     @SuppressWarnings("SleepWhileInLoop")
     public void run() {

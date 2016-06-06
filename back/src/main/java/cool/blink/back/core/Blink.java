@@ -45,7 +45,7 @@ public class Blink {
         return webServer;
     }
 
-    public final void start() throws DuplicateApplicationException, DuplicateDatabaseException {
+    public final void start(final Boolean deleteExistingDatabase) throws DuplicateApplicationException, DuplicateDatabaseException {
         Container.add(this);
         if (this.cloud != null) {
             for (Prerun prerun : this.cloud.getPreruns()) {
@@ -74,11 +74,13 @@ public class Blink {
     }
 
     public static final void enableFileLogging(final String applicationName, final Level level) {
+        org.apache.log4j.Logger.getRootLogger().setLevel(org.apache.log4j.Level.OFF);
         java.util.logging.LogManager.getLogManager().reset();
         LogUtilities.setAllLoggersToWriteToFile(applicationName + ".xml", 209715200, level);
     }
 
     public static final void enableConsoleLogging(final Level level) {
+        org.apache.log4j.Logger.getRootLogger().setLevel(org.apache.log4j.Level.OFF);
         Handler[] handlers = Logger.getLogger("").getHandlers();
         for (Handler handler : handlers) {
             handler.setLevel(level);

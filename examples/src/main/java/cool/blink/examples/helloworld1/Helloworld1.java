@@ -6,6 +6,7 @@ import cool.blink.back.webserver.Url;
 import cool.blink.back.database.ActionExecutor;
 import cool.blink.back.database.ActionSynchronizer;
 import cool.blink.back.database.Database;
+import cool.blink.back.database.DatabaseBackup;
 import cool.blink.back.database.DatabaseChain;
 import cool.blink.back.database.DatabaseDetails;
 import cool.blink.back.database.DatabasePortScanner;
@@ -14,6 +15,7 @@ import cool.blink.back.database.Territory;
 import cool.blink.back.exception.DuplicateApplicationException;
 import cool.blink.back.exception.DuplicateDatabaseException;
 import cool.blink.back.exception.InvalidPortsException;
+import cool.blink.back.utilities.DateUtilities;
 import cool.blink.back.utilities.LogUtilities;
 import cool.blink.back.utilities.LogUtilities.Priority;
 import cool.blink.back.webserver.Fail;
@@ -28,6 +30,7 @@ import cool.blink.back.webserver.WebServerPortScanner;
 import cool.blink.examples.helloworld1.scenario.foo.create.InvalidNameFoo;
 import cool.blink.examples.helloworld1.scenario.foo.create.ValidFoo;
 import cool.blink.examples.helloworld1.scenario.home.read.Home;
+import java.io.File;
 import java.io.IOException;
 import static java.util.Arrays.asList;
 import java.util.List;
@@ -45,8 +48,9 @@ public class Helloworld1 {
             Cloud cloud = null;
             List<Database> databases = asList(
                     new Database(
+                            new DatabaseDetails("db1", "localhost", 1111, System.currentTimeMillis()),
                             new DatabaseChain(name, "db1", ""),
-                            new DatabaseDetails("db1", "localhost", 1111),
+                            new DatabaseBackup(new File("database_backups1"), DateUtilities.TWO_HOURS_TO_MILLISECONDS),
                             new DatabaseSocketManager(10L, 10000),
                             new DatabasePortScanner(10000L, 10000, new Territory("localhost", 2222, 2222), new Territory("localhost", 5555, 5555)),
                             new ActionSynchronizer(10000L, 10000),
@@ -54,8 +58,9 @@ public class Helloworld1 {
                             new InitializeDb1()
                     ),
                     new Database(
+                            new DatabaseDetails("db5", "localhost", 5555, System.currentTimeMillis()),
                             new DatabaseChain(name, "db5", ""),
-                            new DatabaseDetails("db5", "localhost", 5555),
+                            new DatabaseBackup(new File("database_backups5"), DateUtilities.TWO_HOURS_TO_MILLISECONDS),
                             new DatabaseSocketManager(10L, 10000),
                             new DatabasePortScanner(10000L, 10000, new Territory("localhost", 1111, 1111)),
                             new ActionSynchronizer(10000L, 10000),
@@ -81,7 +86,7 @@ public class Helloworld1 {
                     new Home(new Url("http://localhost:8181/examples/HelloWorld/home", true))
             );
             Helloworld1.helloworld1 = new Blink(name, cloud, databases, webServer);
-            helloworld1.start();
+            helloworld1.start(Boolean.TRUE);
         } catch (IOException | InvalidPortsException | DuplicateApplicationException | DuplicateDatabaseException ex) {
             Logger.getLogger(Helloworld1.class.getName()).log(LogUtilities.Priority.HIGHEST, null, ex);
         }

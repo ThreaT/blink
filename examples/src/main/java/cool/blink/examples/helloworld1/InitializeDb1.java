@@ -10,16 +10,12 @@ import java.util.logging.Logger;
 
 public final class InitializeDb1 extends Builder {
 
-    public InitializeDb1() {
-
-    }
-
     @Override
     public final synchronized void execute() {
         Database database = Container.getDatabase(Helloworld1.helloworld1, "db1");
         try {
             database.createTable(Foo.class);
-        } catch (ClassNotFoundException | SQLException | IllegalAccessException | IllegalArgumentException ex) {
+        } catch (ClassNotFoundException | SQLException | IllegalArgumentException ex) {
             Logger.getLogger(InitializeDb1.class.getName()).log(Priority.HIGHEST, null, ex);
         }
     }

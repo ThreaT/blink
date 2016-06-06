@@ -57,7 +57,7 @@ public class Echo {
                     new EchoRead(new Url("http://localhost:80/examples/echo/echo"))
             );
             Echo.echo = new Blink(name, cloud, databases, webServer);
-            echo.start();
+            echo.start(Boolean.TRUE);
         } catch (IOException | InvalidPortsException | DuplicateApplicationException | DuplicateDatabaseException ex) {
             Logger.getLogger(Echo.class.getName()).log(LogUtilities.Priority.HIGHEST, null, ex);
         }

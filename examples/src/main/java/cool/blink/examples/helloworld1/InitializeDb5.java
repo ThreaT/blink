@@ -19,7 +19,7 @@ public final class InitializeDb5 extends Builder {
         Database database = Container.getDatabase(Helloworld1.helloworld1, "db5");
         try {
             database.createTable(Foo.class);
-        } catch (ClassNotFoundException | SQLException | IllegalAccessException | IllegalArgumentException ex) {
+        } catch (ClassNotFoundException | SQLException | IllegalArgumentException ex) {
             Logger.getLogger(InitializeDb5.class.getName()).log(Priority.HIGHEST, null, ex);
         }
     }

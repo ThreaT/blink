@@ -19,7 +19,7 @@ public final class InitializeDb2 extends Builder {
         Database database = Container.getDatabase(Helloworld2.helloworld2, "db2");
         try {
             database.createTable(Foo.class);
-        } catch (ClassNotFoundException | SQLException | IllegalAccessException | IllegalArgumentException ex) {
+        } catch (ClassNotFoundException | SQLException | IllegalArgumentException ex) {
             Logger.getLogger(InitializeDb2.class.getName()).log(Priority.HIGHEST, null, ex);
         }
     }

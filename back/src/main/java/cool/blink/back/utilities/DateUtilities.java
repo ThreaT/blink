@@ -13,15 +13,19 @@ import org.joda.time.format.DateTimeFormatter;
 
 public class DateUtilities {
 
+    public static final Integer TEN_MILLISECONDS = 10;
     public static final Integer ONE_SECOND_TO_MILLISECONDS = 1000;
     public static final Integer THREE_SECONDS_TO_MILLISECONDS = 3000;
     public static final Integer FIVE_SECONDS_TO_MILLISECONDS = 5000;
     public static final Integer TEN_SECONDS_TO_MILLISECONDS = 10000;
+    public static final Integer FIFTEEN_SECONDS_TO_MILLISECONDS = 15000;
     public static final Integer ONE_MINUTE_TO_MILLISECONDS = 60000;
+    public static final Integer TWO_MINUTES_TO_MILLISECONDS = 120000;
     public static final Integer FIVE_MINUTES_TO_MILLISECONDS = 300000;
     public static final Integer TEN_MINUTES_TO_MILLISECONDS = 600000;
     public static final Integer THIRTY_MINUTES_TO_MILLISECONDS = 1800000;
     public static final Integer ONE_HOUR_TO_MILLISECONDS = 3600000;
+    public static final Integer TWO_HOURS_TO_MILLISECONDS = 7200000;
     public static final Integer SIX_HOURS_TO_MILLISECONDS = 21600000;
     public static final Integer TWELVE_HOURS_TO_MILLISECONDS = 43200000;
     public static final Integer ONE_DAY_TO_MILLISECONDS = 86400000;

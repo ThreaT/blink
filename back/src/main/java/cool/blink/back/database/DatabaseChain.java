@@ -19,7 +19,6 @@ public final class DatabaseChain {
         } else {
             temp = databaseDestination;
         }
-
         this.databaseDestination = temp;
     }
 

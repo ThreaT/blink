@@ -6,6 +6,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.SQLException;
@@ -13,8 +14,9 @@ import java.util.List;
 import java.util.logging.Logger;
 
 /**
- * Responds to PortScanner Pings, ActionSynchronizer TotalActionsRequests and
- * ActionSynchronizer MissingActionRecordRequests from other Blink instances
+ * Responds to PortScanner Pings and MasterCopyRequests, ActionSynchronizer
+ * TotalActionsRequests and ActionSynchronizer MissingActionRecordRequests from
+ * other Blink instances
  */
 public class DatabaseSocketManager extends Thread {
 
@@ -66,20 +68,18 @@ public class DatabaseSocketManager extends Thread {
                             } catch (IOException ex) {
                                 Logger.getLogger(Database.class.getName()).log(LogUtilities.Priority.HIGHEST, null, ex);
                             }
-                        }
-                        if ((databaseProcess != null) && (databaseProcess.getDatabaseProcessType().equals(DatabaseProcessType.TotalActionsRequest))) {
+                        } else if ((databaseProcess != null) && (databaseProcess.getDatabaseProcessType().equals(DatabaseProcessType.TotalActionsRequest))) {
                             List<Record> actions = database.readRecordsForBlink(Action.class, new PreparedEntry("SELECT * FROM ACTION WHERE databaseId = ?", new Parameter(1, databaseProcess.getDatabaseDetails().getId(), String.class)));
                             Integer totalMissingActions = (Integer) databaseProcess.getObject() - actions.size();
                             objectOutputStream.writeObject(new DatabaseProcess(database.getDatabaseDetails(), totalMissingActions, DatabaseProcessType.TotalActionsResponse));
-                        }
-                        if ((databaseProcess != null) && (databaseProcess.getDatabaseProcessType().equals(DatabaseProcessType.MissingActionRecordRequest))) {
+                        } else if ((databaseProcess != null) && (databaseProcess.getDatabaseProcessType().equals(DatabaseProcessType.MissingActionRecordRequest))) {
                             Action action = (Action) databaseProcess.getObject();
                             Boolean hasAction = (!(database.readRecordsForBlink(Action.class, new PreparedEntry("SELECT * FROM ACTION WHERE creationTime = " + action.getCreationTime() + " AND databaseId = '" + action.getDatabaseId() + "'"), 1)).isEmpty());
                             if (!hasAction) {
-                                database.persistAction(new Action(action.getCreationTime(), action.getDatabaseId(), action.getForwardStatement(), action.getRollbackStatement(), 0L));
+                                database.createRecord(new Action(action.getCreationTime(), action.getDatabaseId(), action.getForwardStatement(), action.getRollbackStatement(), 0L));
                             }
                         }
-                    } catch (EOFException | SQLException | ClassNotFoundException | InterruptedException ex) {
+                    } catch (EOFException | SQLException | ClassNotFoundException | InterruptedException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException ex) {
                         Logger.getLogger(DatabaseSocketManager.class.getName()).log(LogUtilities.Priority.HIGHEST, null, ex);
                     }
                 }
